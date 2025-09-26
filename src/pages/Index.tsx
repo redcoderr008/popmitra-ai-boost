@@ -5,40 +5,10 @@ import { InputSection } from "@/components/InputSection";
 import { ResultsSection } from "@/components/ResultsSection";
 import { PricingSection } from "@/components/PricingSection";
 import { Footer } from "@/components/Footer";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Toaster } from "@/components/ui/toaster";
 
-// Mock AI-generated content (replace with real API later)
-const generateMockContent = (description: string) => {
-  const templates = {
-    titles: [
-      "🔥 This Will BLOW Your Mind! (You Won't Believe What Happens Next)",
-      "The SECRET That Everyone's Talking About - REVEALED!",
-      "I Tried This For 30 Days... The Results Were INSANE",
-      "VIRAL: The One Thing Nobody Tells You About...",
-      "This Changes EVERYTHING! (Viral Moment Caught on Camera)"
-    ],
-    description: `🌟 Get ready for an incredible journey! This content will absolutely transform your perspective and leave you wanting more.
-
-🔥 In this amazing video, you'll discover:
-• Mind-blowing insights that will change everything
-• Exclusive tips that most people don't know
-• Behind-the-scenes secrets revealed for the first time
-• Life-changing moments caught on camera
-
-💡 Don't forget to SMASH that like button if this helped you, SUBSCRIBE for more incredible content, and SHARE with your friends who need to see this!
-
-🔔 Turn on notifications so you never miss our latest uploads!
-
-#Viral #MustWatch #GameChanger`,
-    hashtags: [
-      "#viral", "#trending", "#fyp", "#amazing", "#incredible", "#mindblown",
-      "#secret", "#revealed", "#exclusive", "#behindthescenes", "#epic",
-      "#insane", "#wow", "#unbelievable", "#gamechanger", "#mustsee",
-      "#viralcontent", "#trending2024", "#popular", "#explore"
-    ]
-  };
-
-  return templates;
-};
 
 const Index = () => {
   const [generatedContent, setGeneratedContent] = useState<any>(null);
@@ -46,6 +16,7 @@ const Index = () => {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const inputRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const handleGetStarted = () => {
     inputRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -54,29 +25,89 @@ const Index = () => {
   const handleGenerate = async (description: string) => {
     setIsGenerating(true);
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const content = generateMockContent(description);
-    setGeneratedContent(content);
-    setIsGenerating(false);
-    
-    // Smooth scroll to results
-    setTimeout(() => {
-      resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 300);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-content', {
+        body: { description }
+      });
+      
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Failed to generate content');
+      }
+      
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+      
+      if (!data?.titles || !data?.description || !data?.hashtags) {
+        throw new Error('Invalid response format');
+      }
+      
+      setGeneratedContent(data);
+      
+      toast({
+        title: "Content generated!",
+        description: "Your viral content is ready",
+      });
+      
+      // Smooth scroll to results
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 300);
+      
+    } catch (error) {
+      console.error('Error generating content:', error);
+      toast({
+        title: "Generation failed",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleRegenerate = async () => {
+    if (!generatedContent) return;
+    
     setIsRegenerating(true);
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Generate slightly different content
-    const content = generateMockContent("regenerated");
-    setGeneratedContent(content);
-    setIsRegenerating(false);
+    try {
+      // Use the previous description to regenerate
+      const { data, error } = await supabase.functions.invoke('generate-content', {
+        body: { description: "regenerate with different creative approach" }
+      });
+      
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Failed to regenerate content');
+      }
+      
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+      
+      if (!data?.titles || !data?.description || !data?.hashtags) {
+        throw new Error('Invalid response format');
+      }
+      
+      setGeneratedContent(data);
+      
+      toast({
+        title: "Content regenerated!",
+        description: "New viral content variations are ready",
+      });
+      
+    } catch (error) {
+      console.error('Error regenerating content:', error);
+      toast({
+        title: "Regeneration failed",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRegenerating(false);
+    }
   };
 
   return (
@@ -107,6 +138,7 @@ const Index = () => {
       </main>
       
       <Footer />
+      <Toaster />
     </div>
   );
 };
