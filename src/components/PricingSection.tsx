@@ -15,7 +15,7 @@ const plans = [
       "Up to 10 hashtags",
       "Community support"
     ],
-    cta: "Get Started Free",
+    cta: "Try Free Now",
     popular: false,
     variant: "outline" as const
   },
@@ -138,7 +138,7 @@ export const PricingSection = () => {
         
         <div className="text-center mt-12 animate-fade-in">
           <p className="text-muted-foreground mb-4">
-            All plans include 7-day free trial • No credit card required • Cancel anytime
+            Free plan requires no signup • Pro plans include 7-day free trial • Cancel anytime
           </p>
           <div className="flex items-center justify-center gap-8 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">

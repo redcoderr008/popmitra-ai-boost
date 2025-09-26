@@ -36,7 +36,7 @@ export const Header = () => {
               Sign In
             </Button>
             <Button variant="default">
-              Get Started
+              Try Free
             </Button>
           </div>
 
@@ -73,7 +73,7 @@ export const Header = () => {
                   Sign In
                 </Button>
                 <Button variant="default" className="justify-start">
-                  Get Started
+                  Try Free
                 </Button>
               </div>
             </nav>
