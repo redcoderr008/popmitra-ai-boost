@@ -1,8 +1,8 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Wand2, Upload, Type, X, Play } from "lucide-react";
+import { Wand2, Upload, Type, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -16,9 +16,8 @@ interface InputSectionProps {
 export const InputSection = ({ onGenerate, isGenerating }: InputSectionProps) => {
   const [description, setDescription] = useState("");
   const [inputMode, setInputMode] = useState<"text" | "upload">("text");
-  const [uploadedVideo, setUploadedVideo] = useState<File | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -26,36 +25,40 @@ export const InputSection = ({ onGenerate, isGenerating }: InputSectionProps) =>
     e.preventDefault();
     if (inputMode === "text" && description.trim()) {
       onGenerate(description.trim());
-    } else if (inputMode === "upload" && uploadedVideo) {
-      const videoDescription = `Video analysis for: ${uploadedVideo.name}`;
-      onGenerate(videoDescription);
+    } else if (inputMode === "upload" && uploadedFile) {
+      // Generate description based on uploaded video
+      const fileDescription = `Video file: ${uploadedFile.name} (${(uploadedFile.size / (1024 * 1024)).toFixed(2)}MB)`;
+      onGenerate(fileDescription);
     }
   };
 
-  const validateVideoFile = (file: File): string | null => {
-    const maxSize = 100 * 1024 * 1024; // 100MB
-    const allowedTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/wmv', 'video/webm'];
-    
-    if (!allowedTypes.includes(file.type)) {
-      return 'Please upload a valid video file (MP4, AVI, MOV, WMV, or WebM)';
-    }
-    
-    if (file.size > maxSize) {
-      return 'Video file must be less than 100MB';
-    }
-    
-    return null;
-  };
-
-  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-
-    const validationError = validateVideoFile(file);
-    if (validationError) {
+  const handleVideoUpload = async (file: File) => {
+    if (!user) {
       toast({
-        title: "Invalid file",
-        description: validationError,
+        title: "Authentication required",
+        description: "Please sign in to upload videos",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['video/mp4', 'video/webm', 'video/mov', 'video/avi', 'video/quicktime'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a video file (MP4, WebM, MOV, AVI)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 100MB)
+    const maxSize = 100 * 1024 * 1024; // 100MB
+    if (file.size > maxSize) {
+      toast({
+        title: "File too large",
+        description: "Please upload a video smaller than 100MB",
         variant: "destructive",
       });
       return;
@@ -71,20 +74,18 @@ export const InputSection = ({ onGenerate, isGenerating }: InputSectionProps) =>
         .from('videos')
         .upload(fileName, file);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      setUploadedVideo(file);
+      setUploadedFile(file);
       toast({
-        title: "Video uploaded",
-        description: "Your video has been uploaded successfully!",
+        title: "Video uploaded successfully",
+        description: "Your video has been uploaded and is ready for content generation",
       });
     } catch (error) {
       console.error('Upload error:', error);
       toast({
         title: "Upload failed",
-        description: error instanceof Error ? error.message : "Please try again",
+        description: "Failed to upload video. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -92,10 +93,10 @@ export const InputSection = ({ onGenerate, isGenerating }: InputSectionProps) =>
     }
   };
 
-  const removeVideo = () => {
-    setUploadedVideo(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleVideoUpload(file);
     }
   };
 
@@ -107,7 +108,7 @@ export const InputSection = ({ onGenerate, isGenerating }: InputSectionProps) =>
             Describe Your Content
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Tell us about your video content or upload a video file to generate viral-ready titles, descriptions, and hashtags.
+            Tell us about your video content or upload a video file, and we'll generate viral-ready titles, descriptions, and hashtags.
           </p>
         </div>
 
@@ -137,7 +138,8 @@ export const InputSection = ({ onGenerate, isGenerating }: InputSectionProps) =>
                 disabled={!user}
               >
                 <Upload className="w-4 h-4" />
-                Upload Video {!user && "(Sign in required)"}
+                Upload Video
+                {!user && <Lock className="w-3 h-3 ml-1" />}
               </Button>
             </div>
           </CardHeader>
@@ -159,81 +161,75 @@ Example: 'A travel vlog showing the top 5 hidden beaches in Bali with stunning s
                     {description.length}/500 characters
                   </div>
                 </div>
-              ) : user ? (
+              ) : !user ? (
+                <div className="border-2 border-dashed border-border rounded-lg p-12 text-center bg-muted/50">
+                  <Lock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-lg font-medium text-muted-foreground mb-2">
+                    Sign In Required
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    You need to be signed in to upload video files for content generation.
+                  </p>
+                  <Link to="/auth">
+                    <Button variant="outline">
+                      Sign In to Upload Videos
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
                 <div className="space-y-4">
-                  {!uploadedVideo ? (
-                    <div 
-                      className="border-2 border-dashed border-border rounded-lg p-12 text-center bg-muted/50 hover:bg-muted/70 transition-colors cursor-pointer"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
+                  <div className="border-2 border-dashed border-border rounded-lg p-8 text-center bg-muted/50 hover:bg-muted/70 transition-colors">
+                    <input
+                      type="file"
+                      accept="video/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="video-upload"
+                      disabled={isUploading}
+                    />
+                    <label htmlFor="video-upload" className="cursor-pointer block">
                       {isUploading ? (
                         <>
-                          <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
+                          <div className="w-12 h-12 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
+                          <p className="text-lg font-medium text-muted-foreground mb-2">
+                            Uploading...
+                          </p>
+                        </>
+                      ) : uploadedFile ? (
+                        <>
+                          <Upload className="w-12 h-12 mx-auto mb-4 text-green-500" />
                           <p className="text-lg font-medium text-foreground mb-2">
-                            Uploading Video...
+                            Video Uploaded Successfully
+                          </p>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {uploadedFile.name} ({(uploadedFile.size / (1024 * 1024)).toFixed(2)}MB)
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Click to upload a different video
                           </p>
                         </>
                       ) : (
                         <>
                           <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                          <p className="text-lg font-medium text-foreground mb-2">
-                            Click to Upload Video
+                          <p className="text-lg font-medium text-muted-foreground mb-2">
+                            Upload Video File
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Support: MP4, AVI, MOV, WMV, WebM (Max 100MB)
+                            Click to select or drag & drop your video file here
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Supports MP4, WebM, MOV, AVI (max 100MB)
                           </p>
                         </>
                       )}
-                    </div>
-                  ) : (
-                    <div className="border border-border rounded-lg p-4 bg-card">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <Play className="w-5 h-5 text-primary" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-foreground">{uploadedVideo.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {(uploadedVideo.size / (1024 * 1024)).toFixed(2)} MB
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={removeVideo}
-                          className="hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
+                    </label>
+                  </div>
+                  {uploadedFile && (
+                    <div className="text-sm text-muted-foreground p-3 bg-muted/30 rounded-lg">
+                      <p className="font-medium mb-1">Ready for content generation:</p>
+                      <p>We'll analyze your video and generate optimized titles, descriptions, and hashtags based on the content.</p>
                     </div>
                   )}
-                  
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="video/*"
-                    onChange={handleVideoUpload}
-                    className="hidden"
-                    disabled={isUploading}
-                  />
-                </div>
-              ) : (
-                <div className="border-2 border-dashed border-border rounded-lg p-12 text-center bg-muted/50">
-                  <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-lg font-medium text-muted-foreground mb-2">
-                    Sign in to Upload Videos
-                  </p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    You need to be signed in to upload and analyze video content.
-                  </p>
-                  <Link to="/auth">
-                    <Button variant="default">
-                      Sign In
-                    </Button>
-                  </Link>
                 </div>
               )}
               
@@ -243,9 +239,10 @@ Example: 'A travel vlog showing the top 5 hidden beaches in Bali with stunning s
                 size="lg" 
                 className="w-full"
                 disabled={
-                  isGenerating || 
                   (inputMode === "text" && !description.trim()) || 
-                  (inputMode === "upload" && (!uploadedVideo || !user))
+                  (inputMode === "upload" && !uploadedFile) || 
+                  isGenerating || 
+                  isUploading
                 }
               >
                 {isGenerating ? (
