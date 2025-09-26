@@ -4,6 +4,7 @@ import { Hero } from "@/components/Hero";
 import { InputSection } from "@/components/InputSection";
 import { ResultsSection } from "@/components/ResultsSection";
 import { PricingSection } from "@/components/PricingSection";
+import { About } from "@/components/About";
 import { Footer } from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -135,6 +136,8 @@ const Index = () => {
         <div id="pricing">
           <PricingSection />
         </div>
+        
+        <About />
       </main>
       
       <Footer />
