@@ -40,15 +40,45 @@ serve(async (req) => {
     1. 5 catchy, viral video titles (each should be engaging and click-worthy)
     2. 1 SEO-optimized description (include hook line, keywords, call-to-action, and relevant emojis)
     3. 25 trending hashtags (mix of trending, niche, and general hashtags)
+    4. 6 social media captions with different styles:
+       - 2 modern/trendy captions (current slang, contemporary references)
+       - 2 funny/humorous captions (witty, entertaining, meme-worthy)
+       - 2 mixed style captions (inspirational, storytelling, or engaging questions)
     
     Format your response as a valid JSON object with this structure:
     {
       "titles": ["title1", "title2", "title3", "title4", "title5"],
       "description": "optimized description with emojis and CTA",
-      "hashtags": ["#hashtag1", "#hashtag2", ..., "#hashtag25"]
+      "hashtags": ["#hashtag1", "#hashtag2", ..., "#hashtag25"],
+      "captions": [
+        {
+          "text": "caption text here",
+          "style": "modern"
+        },
+        {
+          "text": "caption text here", 
+          "style": "modern"
+        },
+        {
+          "text": "caption text here",
+          "style": "funny"
+        },
+        {
+          "text": "caption text here",
+          "style": "funny"
+        },
+        {
+          "text": "caption text here",
+          "style": "mixed"
+        },
+        {
+          "text": "caption text here",
+          "style": "mixed"
+        }
+      ]
     }
     
-    Make sure the content is engaging, viral-worthy, and optimized for social media platforms.
+    Make sure captions are concise (2-3 sentences max), include relevant emojis, and are optimized for social media engagement. Each caption style should be distinct and authentic to that approach.
     `;
 
     console.log('Calling Gemini API with prompt for description:', description);
@@ -105,7 +135,7 @@ serve(async (req) => {
       const result = JSON.parse(jsonMatch[0]);
       
       // Validate the structure
-      if (!result.titles || !result.description || !result.hashtags) {
+      if (!result.titles || !result.description || !result.hashtags || !result.captions) {
         throw new Error('Invalid JSON structure');
       }
 

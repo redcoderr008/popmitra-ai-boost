@@ -2,13 +2,19 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Copy, RefreshCw, CheckCircle, Star, Hash, FileText } from "lucide-react";
+import { Copy, RefreshCw, CheckCircle, Star, Hash, FileText, MessageSquare, Smile, Zap, Heart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+interface Caption {
+  text: string;
+  style: 'modern' | 'funny' | 'mixed';
+}
 
 interface GeneratedContent {
   titles: string[];
   description: string;
   hashtags: string[];
+  captions: Caption[];
 }
 
 interface ResultsSectionProps {
@@ -77,7 +83,7 @@ export const ResultsSection = ({ content, onRegenerate, isRegenerating }: Result
               Your Viral Content
             </h2>
             <p className="text-lg text-muted-foreground">
-              AI-generated titles, descriptions, and hashtags optimized for maximum engagement
+              AI-generated titles, descriptions, captions, and hashtags optimized for maximum engagement
             </p>
           </div>
           
@@ -140,8 +146,64 @@ export const ResultsSection = ({ content, onRegenerate, isRegenerating }: Result
           </Card>
         </div>
 
-        {/* Hashtags */}
+        {/* Captions */}
         <Card className="shadow-medium mt-8 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-primary" />
+              Social Media Captions
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {content.captions.map((caption, index) => {
+              const getStyleIcon = (style: string) => {
+                switch (style) {
+                  case 'modern': return <Zap className="w-4 h-4 text-blue-500" />;
+                  case 'funny': return <Smile className="w-4 h-4 text-yellow-500" />;
+                  case 'mixed': return <Heart className="w-4 h-4 text-pink-500" />;
+                  default: return <MessageSquare className="w-4 h-4 text-primary" />;
+                }
+              };
+              
+              const getStyleLabel = (style: string) => {
+                switch (style) {
+                  case 'modern': return 'Modern';
+                  case 'funny': return 'Funny';
+                  case 'mixed': return 'Mixed';
+                  default: return 'Caption';
+                }
+              };
+              
+              const getStyleColor = (style: string) => {
+                switch (style) {
+                  case 'modern': return 'bg-blue-500/10 text-blue-700 border-blue-200';
+                  case 'funny': return 'bg-yellow-500/10 text-yellow-700 border-yellow-200';
+                  case 'mixed': return 'bg-pink-500/10 text-pink-700 border-pink-200';
+                  default: return 'bg-primary/10 text-primary border-primary/20';
+                }
+              };
+
+              return (
+                <div
+                  key={index}
+                  className="flex items-start gap-3 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                >
+                  <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getStyleColor(caption.style)}`}>
+                    {getStyleIcon(caption.style)}
+                    {getStyleLabel(caption.style)}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm leading-relaxed whitespace-pre-line">{caption.text}</p>
+                  </div>
+                  <CopyButton text={caption.text} type="Caption" />
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+
+        {/* Hashtags */}
+        <Card className="shadow-medium mt-8 animate-slide-up" style={{ animationDelay: '0.3s' }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Hash className="w-5 h-5 text-primary" />
