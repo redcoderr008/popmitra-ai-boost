@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Wand2, Upload, Type, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +19,7 @@ export const InputSection = ({ onGenerate, isGenerating }: InputSectionProps) =>
   const [inputMode, setInputMode] = useState<"text" | "upload">("text");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showSignInDialog, setShowSignInDialog] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -120,12 +122,12 @@ export const InputSection = ({ onGenerate, isGenerating }: InputSectionProps) =>
             </CardTitle>
             
             {/* Mode Selector */}
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 variant={inputMode === "text" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setInputMode("text")}
-                className="flex items-center gap-2"
+                className="flex items-center justify-center gap-2"
               >
                 <Type className="w-4 h-4" />
                 Text Description
@@ -133,9 +135,14 @@ export const InputSection = ({ onGenerate, isGenerating }: InputSectionProps) =>
               <Button
                 variant={inputMode === "upload" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setInputMode("upload")}
-                className="flex items-center gap-2"
-                disabled={!user}
+                onClick={() => {
+                  if (!user) {
+                    setShowSignInDialog(true);
+                    return;
+                  }
+                  setInputMode("upload");
+                }}
+                className="flex items-center justify-center gap-2"
               >
                 <Upload className="w-4 h-4" />
                 Upload Video
@@ -154,31 +161,16 @@ export const InputSection = ({ onGenerate, isGenerating }: InputSectionProps) =>
 Example: 'A travel vlog showing the top 5 hidden beaches in Bali with stunning sunset shots, local food recommendations, and budget travel tips for backpackers.'"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="min-h-32 resize-none"
+                    className="min-h-32 resize-none text-sm sm:text-base"
                     disabled={isGenerating}
                   />
                   <div className="text-sm text-muted-foreground">
                     {description.length}/500 characters
                   </div>
                 </div>
-              ) : !user ? (
-                <div className="border-2 border-dashed border-border rounded-lg p-12 text-center bg-muted/50">
-                  <Lock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-lg font-medium text-muted-foreground mb-2">
-                    Sign In Required
-                  </p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    You need to be signed in to upload video files for content generation.
-                  </p>
-                  <Link to="/auth">
-                    <Button variant="outline">
-                      Sign In to Upload Videos
-                    </Button>
-                  </Link>
-                </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="border-2 border-dashed border-border rounded-lg p-8 text-center bg-muted/50 hover:bg-muted/70 transition-colors">
+                  <div className="border-2 border-dashed border-border rounded-lg p-6 sm:p-8 text-center bg-muted/50 hover:bg-muted/70 transition-colors">
                     <input
                       type="file"
                       accept="video/*"
@@ -201,7 +193,7 @@ Example: 'A travel vlog showing the top 5 hidden beaches in Bali with stunning s
                           <p className="text-lg font-medium text-foreground mb-2">
                             Video Uploaded Successfully
                           </p>
-                          <p className="text-sm text-muted-foreground mb-2">
+                          <p className="text-sm text-muted-foreground mb-2 break-all">
                             {uploadedFile.name} ({(uploadedFile.size / (1024 * 1024)).toFixed(2)}MB)
                           </p>
                           <p className="text-xs text-muted-foreground">
@@ -214,7 +206,7 @@ Example: 'A travel vlog showing the top 5 hidden beaches in Bali with stunning s
                           <p className="text-lg font-medium text-muted-foreground mb-2">
                             Upload Video File
                           </p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-muted-foreground px-2">
                             Click to select or drag & drop your video file here
                           </p>
                           <p className="text-xs text-muted-foreground mt-2">
@@ -260,6 +252,36 @@ Example: 'A travel vlog showing the top 5 hidden beaches in Bali with stunning s
             </form>
           </CardContent>
         </Card>
+
+        {/* Sign In Dialog */}
+        <Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Lock className="w-5 h-5 text-primary" />
+                Sign In Required
+              </DialogTitle>
+              <DialogDescription className="text-left">
+                You need to be signed in to upload video files for content generation. 
+                Sign in to access this feature and get personalized content recommendations.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col sm:flex-row gap-3 mt-4">
+              <Link to="/auth" className="flex-1">
+                <Button className="w-full" onClick={() => setShowSignInDialog(false)}>
+                  Sign In Now
+                </Button>
+              </Link>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowSignInDialog(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </section>
   );
