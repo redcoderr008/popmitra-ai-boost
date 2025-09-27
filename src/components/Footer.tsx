@@ -92,9 +92,14 @@ export const Footer = () => {
         </div>
 
         <div className="border-t border-background/20 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-background/70">
-            © PopMitra. All rights reserved.
-          </p>
+          <div className="flex flex-col items-center md:items-start gap-2">
+            <p className="text-sm text-background/70">
+              © PopMitra. All rights reserved.
+            </p>
+            <p className="text-xs text-background/50">
+              made by karan
+            </p>
+          </div>
           <div className="flex items-center gap-6 text-sm text-background/70">
             <a href="#" className="hover:text-background transition-colors">Terms of Service</a>
             <a href="#" className="hover:text-background transition-colors">Privacy Policy</a>
