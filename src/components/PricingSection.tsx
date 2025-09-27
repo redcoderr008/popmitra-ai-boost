@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, Star, Zap, Crown } from "lucide-react";
+import { useComingSoon } from "@/hooks/useComingSoon";
 
 const plans = [
   {
@@ -60,6 +61,7 @@ const plans = [
 ];
 
 export const PricingSection = () => {
+  const { showComingSoon } = useComingSoon();
   return (
     <section className="py-20 px-6 bg-gradient-secondary">
       <div className="max-w-6xl mx-auto">
@@ -127,6 +129,7 @@ export const PricingSection = () => {
                     variant={plan.variant} 
                     size="lg" 
                     className="w-full"
+                    onClick={showComingSoon}
                   >
                     {plan.cta}
                   </Button>
