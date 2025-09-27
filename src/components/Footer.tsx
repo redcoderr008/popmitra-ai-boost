@@ -93,7 +93,7 @@ export const Footer = () => {
 
         <div className="border-t border-background/20 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-background/70">
-            © 2024 PopMitra. All rights reserved.
+            © PopMitra. All rights reserved.
           </p>
           <div className="flex items-center gap-6 text-sm text-background/70">
             <a href="#" className="hover:text-background transition-colors">Terms of Service</a>
