@@ -1,17 +1,15 @@
 import { Button } from "@/components/ui/button";
 import heroImage from "@/assets/hero-bg.jpg";
 import { ArrowRight, Sparkles, TrendingUp } from "lucide-react";
-
-export const Hero = ({ onGetStarted }: { onGetStarted: () => void }) => {
-  return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+export const Hero = ({
+  onGetStarted
+}: {
+  onGetStarted: () => void;
+}) => {
+  return <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background with gradient overlay */}
       <div className="absolute inset-0">
-        <img 
-          src={heroImage} 
-          alt="PopMitra Hero Background" 
-          className="w-full h-full object-cover"
-        />
+        <img src={heroImage} alt="PopMitra Hero Background" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-hero opacity-85"></div>
       </div>
       
@@ -36,12 +34,7 @@ export const Hero = ({ onGetStarted }: { onGetStarted: () => void }) => {
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-          <Button 
-            variant="hero" 
-            size="lg" 
-            onClick={onGetStarted}
-            className="text-lg px-8 py-6 h-auto group"
-          >
+          <Button variant="hero" size="lg" onClick={onGetStarted} className="text-lg px-8 py-6 h-auto group">
             Get Started Free
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </Button>
@@ -55,11 +48,11 @@ export const Hero = ({ onGetStarted }: { onGetStarted: () => void }) => {
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-white">
           <div className="text-center">
-            <div className="text-3xl font-bold mb-1">10K+</div>
+            <div className="text-3xl font-bold mb-1">30+</div>
             <div className="text-white/70">Content Creators</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold mb-1">2M+</div>
+            <div className="text-3xl font-bold mb-1">1K+</div>
             <div className="text-white/70">Titles Generated</div>
           </div>
           <div className="text-center">
@@ -68,6 +61,5 @@ export const Hero = ({ onGetStarted }: { onGetStarted: () => void }) => {
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
