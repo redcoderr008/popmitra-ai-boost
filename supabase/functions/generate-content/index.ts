@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { description } = await req.json();
+    const { description, settings } = await req.json();
     
     if (!description) {
       return new Response(JSON.stringify({ error: 'Description is required' }), {
@@ -31,10 +31,22 @@ serve(async (req) => {
       });
     }
 
+    // Extract settings with defaults
+    const language = settings?.language || 'english';
+    const tone = settings?.tone || 'engaging';
+    const audience = settings?.audience || 'general';
+    const contentType = settings?.contentType || 'general';
+
     const prompt = `
     You are PopMitra, an AI assistant that helps creators make their videos go viral. 
     
     Based on this content description: "${description}"
+    
+    GENERATION SETTINGS:
+    - Language: ${language}
+    - Tone: ${tone}
+    - Target Audience: ${audience}
+    - Content Type: ${contentType}
     
     Please generate:
     1. 5 catchy, viral video titles (each should be engaging and click-worthy)

@@ -23,12 +23,12 @@ const Index = () => {
     inputRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleGenerate = async (description: string) => {
+  const handleGenerate = async (description: string, settings?: any) => {
     setIsGenerating(true);
     
     try {
       const { data, error } = await supabase.functions.invoke('generate-content', {
-        body: { description }
+        body: { description, settings }
       });
       
       if (error) {

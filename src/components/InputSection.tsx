@@ -3,14 +3,23 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Wand2, Upload, Type, Lock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Wand2, Upload, Type, Lock, Settings, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 
+interface GenerationSettings {
+  language: string;
+  tone: string;
+  audience: string;
+  contentType: string;
+}
+
 interface InputSectionProps {
-  onGenerate: (description: string) => void;
+  onGenerate: (description: string, settings?: GenerationSettings) => void;
   isGenerating: boolean;
 }
 
@@ -20,17 +29,24 @@ export const InputSection = ({ onGenerate, isGenerating }: InputSectionProps) =>
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showSignInDialog, setShowSignInDialog] = useState(false);
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [settings, setSettings] = useState<GenerationSettings>({
+    language: "english",
+    tone: "engaging",
+    audience: "general",
+    contentType: "general"
+  });
   const { user } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputMode === "text" && description.trim()) {
-      onGenerate(description.trim());
+      onGenerate(description.trim(), settings);
     } else if (inputMode === "upload" && uploadedFile) {
       // Generate description based on uploaded video
       const fileDescription = `Video file: ${uploadedFile.name} (${(uploadedFile.size / (1024 * 1024)).toFixed(2)}MB)`;
-      onGenerate(fileDescription);
+      onGenerate(fileDescription, settings);
     }
   };
 
@@ -224,8 +240,121 @@ Example: 'A travel vlog showing the top 5 hidden beaches in Bali with stunning s
                   )}
                 </div>
               )}
+
+              {/* Advanced Settings */}
+              <Collapsible open={showAdvancedSettings} onOpenChange={setShowAdvancedSettings}>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-between text-muted-foreground hover:text-foreground"
+                    type="button"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Settings className="w-4 h-4" />
+                      Advanced Settings (Optional)
+                    </div>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${showAdvancedSettings ? 'rotate-180' : ''}`} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 pt-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Language</label>
+                      <Select
+                        value={settings.language}
+                        onValueChange={(value) => setSettings(prev => ({ ...prev, language: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="english">English</SelectItem>
+                          <SelectItem value="spanish">Spanish</SelectItem>
+                          <SelectItem value="french">French</SelectItem>
+                          <SelectItem value="german">German</SelectItem>
+                          <SelectItem value="hindi">Hindi</SelectItem>
+                          <SelectItem value="japanese">Japanese</SelectItem>
+                          <SelectItem value="korean">Korean</SelectItem>
+                          <SelectItem value="portuguese">Portuguese</SelectItem>
+                          <SelectItem value="italian">Italian</SelectItem>
+                          <SelectItem value="nepali">Nepali</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Tone</label>
+                      <Select
+                        value={settings.tone}
+                        onValueChange={(value) => setSettings(prev => ({ ...prev, tone: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="engaging">Engaging</SelectItem>
+                          <SelectItem value="professional">Professional</SelectItem>
+                          <SelectItem value="casual">Casual</SelectItem>
+                          <SelectItem value="funny">Funny</SelectItem>
+                          <SelectItem value="dramatic">Dramatic</SelectItem>
+                          <SelectItem value="educational">Educational</SelectItem>
+                          <SelectItem value="inspirational">Inspirational</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Target Audience</label>
+                      <Select
+                        value={settings.audience}
+                        onValueChange={(value) => setSettings(prev => ({ ...prev, audience: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="general">General Audience</SelectItem>
+                          <SelectItem value="teens">Teens (13-19)</SelectItem>
+                          <SelectItem value="young-adults">Young Adults (20-35)</SelectItem>
+                          <SelectItem value="adults">Adults (35-50)</SelectItem>
+                          <SelectItem value="seniors">Seniors (50+)</SelectItem>
+                          <SelectItem value="kids">Kids & Families</SelectItem>
+                          <SelectItem value="professionals">Professionals</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Content Type</label>
+                      <Select
+                        value={settings.contentType}
+                        onValueChange={(value) => setSettings(prev => ({ ...prev, contentType: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="general">General</SelectItem>
+                          <SelectItem value="educational">Educational</SelectItem>
+                          <SelectItem value="entertainment">Entertainment</SelectItem>
+                          <SelectItem value="lifestyle">Lifestyle</SelectItem>
+                          <SelectItem value="tech">Technology</SelectItem>
+                          <SelectItem value="gaming">Gaming</SelectItem>
+                          <SelectItem value="food">Food & Cooking</SelectItem>
+                          <SelectItem value="fitness">Fitness & Health</SelectItem>
+                          <SelectItem value="travel">Travel</SelectItem>
+                          <SelectItem value="business">Business</SelectItem>
+                          <SelectItem value="music">Music</SelectItem>
+                          <SelectItem value="art">Art & Design</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
               
-              <Button 
+              <Button
                 type="submit" 
                 variant="gradient" 
                 size="lg" 
