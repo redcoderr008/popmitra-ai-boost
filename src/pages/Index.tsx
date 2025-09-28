@@ -3,6 +3,8 @@ import { Header } from "@/components/Header";
 import { Hero } from "@/components/Hero";
 import { InputSection } from "@/components/InputSection";
 import { ResultsSection } from "@/components/ResultsSection";
+import { Testimonials } from "@/components/Testimonials";
+import { UserMetrics } from "@/components/UserMetrics";
 import { PricingSection } from "@/components/PricingSection";
 import { About } from "@/components/About";
 import { Footer } from "@/components/Footer";
@@ -132,6 +134,10 @@ const Index = () => {
             isRegenerating={isRegenerating}
           />
         </div>
+        
+        <Testimonials />
+        
+        <UserMetrics />
         
         <div id="pricing">
           <PricingSection />
