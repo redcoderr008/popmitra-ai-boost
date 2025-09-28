@@ -59,8 +59,8 @@ const Index = () => {
     } catch (error) {
       console.error('Error generating content:', error);
       toast({
-        title: "Generation failed",
-        description: error instanceof Error ? error.message : "Please try again",
+        title: "Generation Failed",
+        description: "Something went wrong. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -102,8 +102,8 @@ const Index = () => {
     } catch (error) {
       console.error('Error regenerating content:', error);
       toast({
-        title: "Regeneration failed",
-        description: error instanceof Error ? error.message : "Please try again",
+        title: "Regeneration Failed",
+        description: "Something went wrong. Please try again.",
         variant: "destructive",
       });
     } finally {
