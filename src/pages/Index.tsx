@@ -10,6 +10,8 @@ import { About } from "@/components/About";
 import { Footer } from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useUsageLimit } from "@/hooks/useUsageLimit";
 import { Toaster } from "@/components/ui/toaster";
 
 
@@ -20,12 +22,29 @@ const Index = () => {
   const inputRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { 
+    incrementUsage, 
+    hasExceededLimit, 
+    getRemainingGenerations, 
+    isAuthenticated 
+  } = useUsageLimit();
 
   const handleGetStarted = () => {
     inputRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const handleGenerate = async (description: string, settings?: any) => {
+    // Check usage limits for non-authenticated users
+    if (hasExceededLimit()) {
+      toast({
+        title: "Free limit reached",
+        description: "Sign in to continue generating unlimited content.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsGenerating(true);
     
     try {
@@ -47,6 +66,9 @@ const Index = () => {
       }
       
       setGeneratedContent(data);
+      
+      // Increment usage count after successful generation
+      await incrementUsage();
       
       toast({
         title: "Content generated!",
@@ -121,10 +143,12 @@ const Index = () => {
         <Hero onGetStarted={handleGetStarted} />
         
         <div ref={inputRef}>
-          <InputSection 
-            onGenerate={handleGenerate} 
-            isGenerating={isGenerating} 
-          />
+        <InputSection 
+          onGenerate={handleGenerate}
+          isGenerating={isGenerating}
+          remainingGenerations={getRemainingGenerations()}
+          isAuthenticated={isAuthenticated}
+        />
         </div>
         
         <div ref={resultsRef}>

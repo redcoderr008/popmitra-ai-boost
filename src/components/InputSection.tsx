@@ -21,9 +21,11 @@ interface GenerationSettings {
 interface InputSectionProps {
   onGenerate: (description: string, settings?: GenerationSettings) => void;
   isGenerating: boolean;
+  remainingGenerations: number | string;
+  isAuthenticated: boolean;
 }
 
-export const InputSection = ({ onGenerate, isGenerating }: InputSectionProps) => {
+export const InputSection = ({ onGenerate, isGenerating, remainingGenerations, isAuthenticated }: InputSectionProps) => {
   const [description, setDescription] = useState("");
   const [inputMode, setInputMode] = useState<"text" | "upload">("text");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -378,6 +380,26 @@ Example: 'A travel vlog showing the top 5 hidden beaches in Bali with stunning s
                   </>
                 )}
               </Button>
+              
+              {/* Usage Counter */}
+              <div className="text-center mt-4">
+                <p className="text-sm text-muted-foreground">
+                  {isAuthenticated ? (
+                    <span className="text-success font-medium">✨ Unlimited generations</span>
+                  ) : (
+                    <span>
+                      {remainingGenerations} free generation{remainingGenerations !== 1 ? 's' : ''} remaining
+                    </span>
+                  )}
+                </p>
+                {!isAuthenticated && remainingGenerations === 0 && (
+                  <p className="text-sm text-primary font-medium mt-1">
+                    <a href="/auth" className="underline hover:no-underline">
+                      Sign in for unlimited generations
+                    </a>
+                  </p>
+                )}
+              </div>
             </form>
           </CardContent>
         </Card>
