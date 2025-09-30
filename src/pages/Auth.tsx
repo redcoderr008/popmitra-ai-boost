@@ -16,6 +16,7 @@ type AuthStep = "email" | "otp" | "complete";
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [signUpPassword, setSignUpPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
@@ -36,11 +37,24 @@ const Auth = () => {
       return;
     }
 
+    if (isSignUp && !signUpPassword) {
+      setError("Please enter a password");
+      setLoading(false);
+      return;
+    }
+
+    if (isSignUp && signUpPassword.length < 6) {
+      setError("Password must be at least 6 characters");
+      setLoading(false);
+      return;
+    }
+
     try {
       if (isSignUp) {
-        // For sign up, use signInWithOtp which sends email verification
-        const { error } = await supabase.auth.signInWithOtp({
+        // For sign up, use signUp which sends a 6-digit OTP code
+        const { error } = await supabase.auth.signUp({
           email,
+          password: signUpPassword,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
             data: {
@@ -53,8 +67,8 @@ const Auth = () => {
           setError(error.message);
         } else {
           toast({
-            title: "OTP Sent!",
-            description: "Please check your email for the verification code.",
+            title: "Verification Code Sent!",
+            description: "Please check your email for the 6-digit verification code.",
           });
           setAuthStep("otp");
         }
@@ -243,6 +257,7 @@ const Auth = () => {
             setAuthStep("email");
             setError("");
             setOtp("");
+            setSignUpPassword("");
           }}
         >
           <TabsList className="grid w-full grid-cols-2">
@@ -399,13 +414,25 @@ const Auth = () => {
                         required
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Password</Label>
+                      <Input
+                        id="signup-password"
+                        type="password"
+                        placeholder="Create a password (min. 6 characters)"
+                        value={signUpPassword}
+                        onChange={(e) => setSignUpPassword(e.target.value)}
+                        disabled={loading}
+                        required
+                      />
+                    </div>
                     <Button type="submit" className="w-full" disabled={loading}>
                       {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       <Mail className="mr-2 h-4 w-4" />
                       Send Verification Code
                     </Button>
                     <p className="text-xs text-muted-foreground text-center">
-                      Check your spam folder if you don't receive the email within a few minutes
+                      A 6-digit code will be sent to your email. Check your spam folder if you don't receive it.
                     </p>
                   </form>
                 )}
