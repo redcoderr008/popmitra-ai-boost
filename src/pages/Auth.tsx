@@ -26,70 +26,82 @@ const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSendOTP = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    if (!email) {
-      setError("Please enter your email address");
+    if (!email || !signUpPassword) {
+      setError("Please enter your email and password");
       setLoading(false);
       return;
     }
 
-    if (isSignUp && !signUpPassword) {
-      setError("Please enter a password");
-      setLoading(false);
-      return;
-    }
-
-    if (isSignUp && signUpPassword.length < 6) {
+    if (signUpPassword.length < 6) {
       setError("Password must be at least 6 characters");
       setLoading(false);
       return;
     }
 
     try {
-      if (isSignUp) {
-        // For sign up, use signUp which sends a 6-digit OTP code
-        const { error } = await supabase.auth.signUp({
-          email,
-          password: signUpPassword,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`,
-            data: {
-              display_name: displayName
-            }
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: signUpPassword,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            display_name: displayName
           }
-        });
+        }
+      });
 
-        if (error) {
-          setError(error.message);
-        } else {
+      if (error) {
+        setError(error.message);
+      } else if (data.user) {
+        // Check if user needs to confirm email
+        if (data.user.confirmed_at) {
+          // User is already confirmed, redirect
           toast({
-            title: "Verification Code Sent!",
-            description: "Please check your email for the 6-digit verification code.",
+            title: "Account Created!",
+            description: "Welcome to PopMitra!",
+          });
+          navigate("/");
+        } else {
+          // User needs to confirm email
+          toast({
+            title: "Check Your Email!",
+            description: "We sent a confirmation link to your email. Click it to verify your account.",
           });
           setAuthStep("otp");
         }
+      }
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendOTP = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      // Send OTP for sign in
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        }
+      });
+
+      if (error) {
+        setError(error.message);
       } else {
-        // For sign in, send OTP
-        const { error } = await supabase.auth.signInWithOtp({
-          email,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`,
-          }
+        toast({
+          title: "OTP Sent!",
+          description: "Please check your email for the 6-digit verification code.",
         });
-
-        if (error) {
-          setError(error.message);
-        } else {
-          toast({
-            title: "OTP Sent!",
-            description: "Please check your email for the verification code.",
-          });
-          setAuthStep("otp");
-        }
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
@@ -119,15 +131,6 @@ const Auth = () => {
       if (error) {
         setError(error.message);
       } else {
-        // Update email_verified status in profiles table
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase
-            .from('profiles')
-            .update({ email_verified: true })
-            .eq('user_id', user.id);
-        }
-
         toast({
           title: "Success!",
           description: "Your email has been verified. Welcome to PopMitra!",
@@ -146,39 +149,20 @@ const Auth = () => {
     setError("");
 
     try {
-      // Generate a secure random password
-      const randomPassword = Math.random().toString(36).slice(-8) + "A1!";
-      
-      // Create account without email verification
-      const { data, error } = await supabase.auth.signUp({
+      // Just sign in with the password - the account was already created
+      const { error } = await supabase.auth.signInWithPassword({
         email,
-        password: randomPassword,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            display_name: displayName
-          }
-        }
+        password: signUpPassword,
       });
 
       if (error) {
         setError(error.message);
-      } else if (data.user) {
-        // Sign in the user immediately with the random password
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password: randomPassword,
+      } else {
+        toast({
+          title: "Account Created!",
+          description: "You can start using PopMitra with 3 free generations. Verify your email for unlimited access.",
         });
-
-        if (signInError) {
-          setError(signInError.message);
-        } else {
-          toast({
-            title: "Account Created!",
-            description: "You can start using PopMitra with 3 free generations. Verify your email for unlimited access.",
-          });
-          navigate("/");
-        }
+        navigate("/");
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
@@ -207,6 +191,8 @@ const Auth = () => {
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
           setError("Invalid email or password. Please check your credentials and try again.");
+        } else if (error.message.includes("Email not confirmed")) {
+          setError("Please verify your email first. Check your inbox for the confirmation link.");
         } else {
           setError(error.message);
         }
@@ -319,18 +305,16 @@ const Auth = () => {
                       </div>
                       <div className="relative flex justify-center text-xs uppercase">
                         <span className="bg-background px-2 text-muted-foreground">
-                          Or sign in with OTP
+                          Or
                         </span>
                       </div>
                     </div>
 
-                    <form onSubmit={handleSendOTP} className="space-y-4">
-                      <Button type="submit" variant="outline" className="w-full" disabled={loading}>
-                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        <Mail className="mr-2 h-4 w-4" />
-                        Send OTP to Email
-                      </Button>
-                    </form>
+                    <Button type="button" variant="outline" className="w-full" onClick={handleSendOTP} disabled={loading}>
+                      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      <Mail className="mr-2 h-4 w-4" />
+                      Sign In with OTP Instead
+                    </Button>
                   </>
                 )}
 
@@ -390,7 +374,7 @@ const Auth = () => {
               </CardHeader>
               <CardContent>
                 {authStep === "email" && (
-                  <form onSubmit={handleSendOTP} className="space-y-4">
+                  <form onSubmit={handleSignUp} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="signup-name">Display Name (Optional)</Label>
                       <Input
@@ -428,55 +412,19 @@ const Auth = () => {
                     </div>
                     <Button type="submit" className="w-full" disabled={loading}>
                       {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      <Mail className="mr-2 h-4 w-4" />
-                      Send Verification Code
+                      Create Account
                     </Button>
                     <p className="text-xs text-muted-foreground text-center">
-                      A 6-digit code will be sent to your email. Check your spam folder if you don't receive it.
+                      We'll send a confirmation link to your email. Check your spam folder if needed.
                     </p>
                   </form>
                 )}
 
                 {authStep === "otp" && (
                   <div className="space-y-4">
-                    <form onSubmit={handleVerifyOTP} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Enter Verification Code</Label>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          We sent a 6-digit code to {email}
-                        </p>
-                        <div className="flex justify-center">
-                          <InputOTP
-                            maxLength={6}
-                            value={otp}
-                            onChange={(value) => setOtp(value)}
-                          >
-                            <InputOTPGroup>
-                              <InputOTPSlot index={0} />
-                              <InputOTPSlot index={1} />
-                              <InputOTPSlot index={2} />
-                              <InputOTPSlot index={3} />
-                              <InputOTPSlot index={4} />
-                              <InputOTPSlot index={5} />
-                            </InputOTPGroup>
-                          </InputOTP>
-                        </div>
-                      </div>
-                      <Button type="submit" className="w-full" disabled={loading}>
-                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Verify & Create Account
-                      </Button>
-                    </form>
-
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">
-                          Or
-                        </span>
-                      </div>
+                    <div className="text-sm text-muted-foreground space-y-2">
+                      <p>We sent a confirmation link to <strong>{email}</strong></p>
+                      <p>Click the link in your email to verify your account, or skip to use limited features.</p>
                     </div>
 
                     <Button
@@ -486,7 +434,8 @@ const Auth = () => {
                       onClick={handleSkipVerification}
                       disabled={loading}
                     >
-                      Skip Verification (Limited Access)
+                      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Skip & Continue (3 Free Generations)
                     </Button>
 
                     <Button
@@ -495,11 +444,10 @@ const Auth = () => {
                       className="w-full"
                       onClick={() => {
                         setAuthStep("email");
-                        setOtp("");
                         setError("");
                       }}
                     >
-                      Back to Email
+                      Back to Sign Up
                     </Button>
                   </div>
                 )}
