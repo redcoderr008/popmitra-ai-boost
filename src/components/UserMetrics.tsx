@@ -115,5 +115,5 @@ const timeBasedMetrics = [{
   content: "4.8M"
 }];
 export const UserMetrics = () => {
-  return;
+  return null;
 };

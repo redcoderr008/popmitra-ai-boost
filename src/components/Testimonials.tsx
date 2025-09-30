@@ -66,5 +66,5 @@ const platformColors = {
   Brand: "bg-orange-500/10 text-orange-700 dark:text-orange-300"
 };
 export const Testimonials = () => {
-  return;
+  return null;
 };
