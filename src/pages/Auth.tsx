@@ -132,10 +132,13 @@ const Auth = () => {
     setError("");
 
     try {
-      // Create account without email verification using signUp with autoConfirm disabled
+      // Generate a secure random password
+      const randomPassword = Math.random().toString(36).slice(-8) + "A1!";
+      
+      // Create account without email verification
       const { data, error } = await supabase.auth.signUp({
         email,
-        password: Math.random().toString(36).slice(-8) + "A1!", // Generate random password with requirements
+        password: randomPassword,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
@@ -147,12 +150,21 @@ const Auth = () => {
       if (error) {
         setError(error.message);
       } else if (data.user) {
-        // The user is created but email_verified will be false by default
-        toast({
-          title: "Account Created!",
-          description: "You can start using PopMitra with limited access. Verify your email later for full access.",
+        // Sign in the user immediately with the random password
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password: randomPassword,
         });
-        navigate("/");
+
+        if (signInError) {
+          setError(signInError.message);
+        } else {
+          toast({
+            title: "Account Created!",
+            description: "You can start using PopMitra with 3 free generations. Verify your email for unlimited access.",
+          });
+          navigate("/");
+        }
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
@@ -249,13 +261,13 @@ const Auth = () => {
               <CardHeader>
                 <CardTitle>Welcome Back</CardTitle>
                 <CardDescription>
-                  Choose how you'd like to sign in
+                  Sign in to your account
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {authStep === "email" && (
                   <>
-                    <form onSubmit={handleSendOTP} className="space-y-4">
+                    <form onSubmit={handleSignInWithPassword} className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="signin-email">Email</Label>
                         <Input
@@ -268,25 +280,6 @@ const Auth = () => {
                           required
                         />
                       </div>
-                      <Button type="submit" className="w-full" disabled={loading}>
-                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        <Mail className="mr-2 h-4 w-4" />
-                        Sign In with OTP
-                      </Button>
-                    </form>
-
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">
-                          Or continue with password
-                        </span>
-                      </div>
-                    </div>
-
-                    <form onSubmit={handleSignInWithPassword} className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="signin-password">Password</Label>
                         <Input
@@ -296,11 +289,31 @@ const Auth = () => {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           disabled={loading}
+                          required
                         />
                       </div>
-                      <Button type="submit" variant="outline" className="w-full" disabled={loading}>
+                      <Button type="submit" className="w-full" disabled={loading}>
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Sign In with Password
+                      </Button>
+                    </form>
+
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">
+                          Or sign in with OTP
+                        </span>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleSendOTP} className="space-y-4">
+                      <Button type="submit" variant="outline" className="w-full" disabled={loading}>
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Mail className="mr-2 h-4 w-4" />
+                        Send OTP to Email
                       </Button>
                     </form>
                   </>
@@ -391,6 +404,9 @@ const Auth = () => {
                       <Mail className="mr-2 h-4 w-4" />
                       Send Verification Code
                     </Button>
+                    <p className="text-xs text-muted-foreground text-center">
+                      Check your spam folder if you don't receive the email within a few minutes
+                    </p>
                   </form>
                 )}
 
