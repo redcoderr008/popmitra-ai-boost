@@ -7,60 +7,75 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, ArrowLeft, Sparkles } from "lucide-react";
+import { Loader2, ArrowLeft, Sparkles, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+
+type AuthStep = "email" | "otp" | "complete";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [authStep, setAuthStep] = useState<AuthStep>("email");
+  const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    if (!email || !password) {
-      setError("Please fill in all required fields");
-      setLoading(false);
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long");
+    if (!email) {
+      setError("Please enter your email address");
       setLoading(false);
       return;
     }
 
     try {
-      const redirectUrl = `${window.location.origin}/`;
-      
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            display_name: displayName
+      if (isSignUp) {
+        // For sign up, use signInWithOtp which sends email verification
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              display_name: displayName
+            }
           }
-        }
-      });
+        });
 
-      if (error) {
-        if (error.message.includes("User already registered")) {
-          setError("An account with this email already exists. Please sign in instead.");
-        } else {
+        if (error) {
           setError(error.message);
+        } else {
+          toast({
+            title: "OTP Sent!",
+            description: "Please check your email for the verification code.",
+          });
+          setAuthStep("otp");
         }
       } else {
-        toast({
-          title: "Success!",
-          description: "Account created successfully. Please check your email to confirm your account.",
+        // For sign in, send OTP
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+          }
         });
+
+        if (error) {
+          setError(error.message);
+        } else {
+          toast({
+            title: "OTP Sent!",
+            description: "Please check your email for the verification code.",
+          });
+          setAuthStep("otp");
+        }
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
@@ -69,7 +84,84 @@ const Auth = () => {
     }
   };
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    if (!otp || otp.length !== 6) {
+      setError("Please enter the 6-digit code");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'email'
+      });
+
+      if (error) {
+        setError(error.message);
+      } else {
+        // Update email_verified status in profiles table
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase
+            .from('profiles')
+            .update({ email_verified: true })
+            .eq('user_id', user.id);
+        }
+
+        toast({
+          title: "Success!",
+          description: "Your email has been verified. Welcome to PopMitra!",
+        });
+        navigate("/");
+      }
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSkipVerification = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      // Create account without email verification using signUp with autoConfirm disabled
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: Math.random().toString(36).slice(-8) + "A1!", // Generate random password with requirements
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            display_name: displayName
+          }
+        }
+      });
+
+      if (error) {
+        setError(error.message);
+      } else if (data.user) {
+        // The user is created but email_verified will be false by default
+        toast({
+          title: "Account Created!",
+          description: "You can start using PopMitra with limited access. Verify your email later for full access.",
+        });
+        navigate("/");
+      }
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignInWithPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
@@ -109,7 +201,6 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-6">
-        {/* Header */}
         <div className="text-center space-y-4">
           <Button
             variant="ghost"
@@ -132,8 +223,16 @@ const Auth = () => {
           </p>
         </div>
 
-        {/* Auth Tabs */}
-        <Tabs defaultValue="signin" className="space-y-4">
+        <Tabs 
+          defaultValue="signin" 
+          className="space-y-4"
+          onValueChange={(value) => {
+            setIsSignUp(value === "signup");
+            setAuthStep("email");
+            setError("");
+            setOtp("");
+          }}
+        >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="signin">Sign In</TabsTrigger>
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -150,40 +249,105 @@ const Auth = () => {
               <CardHeader>
                 <CardTitle>Welcome Back</CardTitle>
                 <CardDescription>
-                  Sign in to your account to continue generating amazing content
+                  Choose how you'd like to sign in
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
-                    <Input
-                      id="signin-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      disabled={loading}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
-                    <Input
-                      id="signin-password"
-                      type="password"
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={loading}
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Sign In
-                  </Button>
-                </form>
+              <CardContent className="space-y-4">
+                {authStep === "email" && (
+                  <>
+                    <form onSubmit={handleSendOTP} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="signin-email">Email</Label>
+                        <Input
+                          id="signin-email"
+                          type="email"
+                          placeholder="Enter your email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          disabled={loading}
+                          required
+                        />
+                      </div>
+                      <Button type="submit" className="w-full" disabled={loading}>
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Mail className="mr-2 h-4 w-4" />
+                        Sign In with OTP
+                      </Button>
+                    </form>
+
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">
+                          Or continue with password
+                        </span>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleSignInWithPassword} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="signin-password">Password</Label>
+                        <Input
+                          id="signin-password"
+                          type="password"
+                          placeholder="Enter your password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          disabled={loading}
+                        />
+                      </div>
+                      <Button type="submit" variant="outline" className="w-full" disabled={loading}>
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Sign In with Password
+                      </Button>
+                    </form>
+                  </>
+                )}
+
+                {authStep === "otp" && (
+                  <form onSubmit={handleVerifyOTP} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Enter OTP</Label>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        We sent a 6-digit code to {email}
+                      </p>
+                      <div className="flex justify-center">
+                        <InputOTP
+                          maxLength={6}
+                          value={otp}
+                          onChange={(value) => setOtp(value)}
+                        >
+                          <InputOTPGroup>
+                            <InputOTPSlot index={0} />
+                            <InputOTPSlot index={1} />
+                            <InputOTPSlot index={2} />
+                            <InputOTPSlot index={3} />
+                            <InputOTPSlot index={4} />
+                            <InputOTPSlot index={5} />
+                          </InputOTPGroup>
+                        </InputOTP>
+                      </div>
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Verify & Sign In
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full"
+                      onClick={() => {
+                        setAuthStep("email");
+                        setOtp("");
+                        setError("");
+                      }}
+                    >
+                      Back to Email
+                    </Button>
+                  </form>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -193,65 +357,121 @@ const Auth = () => {
               <CardHeader>
                 <CardTitle>Create Account</CardTitle>
                 <CardDescription>
-                  Join thousands of creators using PopMitra to create viral content
+                  Join thousands of creators using PopMitra
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Display Name (Optional)</Label>
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      placeholder="Enter your display name"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
+                {authStep === "email" && (
+                  <form onSubmit={handleSendOTP} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-name">Display Name (Optional)</Label>
+                      <Input
+                        id="signup-name"
+                        type="text"
+                        placeholder="Enter your display name"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email">Email</Label>
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        disabled={loading}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      <Mail className="mr-2 h-4 w-4" />
+                      Send Verification Code
+                    </Button>
+                  </form>
+                )}
+
+                {authStep === "otp" && (
+                  <div className="space-y-4">
+                    <form onSubmit={handleVerifyOTP} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Enter Verification Code</Label>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          We sent a 6-digit code to {email}
+                        </p>
+                        <div className="flex justify-center">
+                          <InputOTP
+                            maxLength={6}
+                            value={otp}
+                            onChange={(value) => setOtp(value)}
+                          >
+                            <InputOTPGroup>
+                              <InputOTPSlot index={0} />
+                              <InputOTPSlot index={1} />
+                              <InputOTPSlot index={2} />
+                              <InputOTPSlot index={3} />
+                              <InputOTPSlot index={4} />
+                              <InputOTPSlot index={5} />
+                            </InputOTPGroup>
+                          </InputOTP>
+                        </div>
+                      </div>
+                      <Button type="submit" className="w-full" disabled={loading}>
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Verify & Create Account
+                      </Button>
+                    </form>
+
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">
+                          Or
+                        </span>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleSkipVerification}
                       disabled={loading}
-                    />
+                    >
+                      Skip Verification (Limited Access)
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full"
+                      onClick={() => {
+                        setAuthStep("email");
+                        setOtp("");
+                        setError("");
+                      }}
+                    >
+                      Back to Email
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      disabled={loading}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="Create a password (min. 6 characters)"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={loading}
-                      required
-                      minLength={6}
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Create Account
-                  </Button>
-                </form>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
 
-        {/* Benefits */}
         <Card className="bg-muted/30 border-0">
           <CardContent className="pt-6">
             <div className="text-center space-y-3">
               <h3 className="font-semibold text-foreground">Why sign up?</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>✨ Unlimited content generation</li>
-                <li>🎯 Advanced AI customization options</li>
+                <li>✨ Unlimited content generation (verified users)</li>
+                <li>🎯 3 generations for unverified users</li>
                 <li>📊 Track your content performance</li>
                 <li>💡 Get personalized recommendations</li>
               </ul>

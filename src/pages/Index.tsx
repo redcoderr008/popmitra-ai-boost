@@ -27,7 +27,8 @@ const Index = () => {
     incrementUsage, 
     hasExceededLimit, 
     getRemainingGenerations, 
-    isAuthenticated 
+    isAuthenticated,
+    isEmailVerified
   } = useUsageLimit();
 
   const handleGetStarted = () => {
@@ -148,6 +149,7 @@ const Index = () => {
           isGenerating={isGenerating}
           remainingGenerations={getRemainingGenerations()}
           isAuthenticated={isAuthenticated}
+          isEmailVerified={isEmailVerified}
         />
         </div>
         

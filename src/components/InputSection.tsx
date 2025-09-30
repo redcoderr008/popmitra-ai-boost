@@ -23,9 +23,10 @@ interface InputSectionProps {
   isGenerating: boolean;
   remainingGenerations: number | string;
   isAuthenticated: boolean;
+  isEmailVerified?: boolean;
 }
 
-export const InputSection = ({ onGenerate, isGenerating, remainingGenerations, isAuthenticated }: InputSectionProps) => {
+export const InputSection = ({ onGenerate, isGenerating, remainingGenerations, isAuthenticated, isEmailVerified = false }: InputSectionProps) => {
   const [description, setDescription] = useState("");
   const [inputMode, setInputMode] = useState<"text" | "upload">("text");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -384,14 +385,23 @@ Example: 'A travel vlog showing the top 5 hidden beaches in Bali with stunning s
               {/* Usage Counter */}
               <div className="text-center mt-4">
                 <p className="text-sm text-muted-foreground">
-                  {isAuthenticated ? (
+                  {isAuthenticated && isEmailVerified ? (
                     <span className="text-success font-medium">✨ Unlimited generations</span>
+                  ) : isAuthenticated && !isEmailVerified ? (
+                    <span className="text-warning font-medium">
+                      ⚠️ {remainingGenerations} generation{remainingGenerations !== 1 ? 's' : ''} remaining (Unverified account)
+                    </span>
                   ) : (
                     <span>
                       {remainingGenerations} free generation{remainingGenerations !== 1 ? 's' : ''} remaining
                     </span>
                   )}
                 </p>
+                {isAuthenticated && !isEmailVerified && (
+                  <p className="text-sm text-primary font-medium mt-1">
+                    Verify your email for unlimited generations
+                  </p>
+                )}
                 {!isAuthenticated && remainingGenerations === 0 && (
                   <p className="text-sm text-primary font-medium mt-1">
                     <a href="/auth" className="underline hover:no-underline">
