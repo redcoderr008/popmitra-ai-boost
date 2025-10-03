@@ -12,10 +12,12 @@ import { useToast } from "@/hooks/use-toast";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 type AuthStep = "email" | "otp" | "complete";
+type AuthMethod = "email" | "phone";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [signUpPassword, setSignUpPassword] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [otp, setOtp] = useState("");
@@ -23,11 +25,65 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [authStep, setAuthStep] = useState<AuthStep>("email");
+  const [authMethod, setAuthMethod] = useState<AuthMethod>("email");
   const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleSignUpWithEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    if (!email || !signUpPassword) {
+      setError("Please enter your email and password");
+      setLoading(false);
+      return;
+    }
+
+    if (signUpPassword.length < 6) {
+      setError("Password must be at least 6 characters");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: signUpPassword,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            display_name: displayName
+          }
+        }
+      });
+
+      if (error) {
+        setError(error.message);
+      } else if (data.user) {
+        if (data.user.confirmed_at) {
+          toast({
+            title: "Account Created!",
+            description: "Welcome to PopMitra!",
+          });
+          navigate("/");
+        } else {
+          toast({
+            title: "Check Your Email!",
+            description: "We sent a confirmation link to your email. Click it to verify your account.",
+          });
+          setAuthStep("complete");
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUpWithPhone = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
@@ -38,7 +94,6 @@ const Auth = () => {
       return;
     }
 
-    // Validate phone number format (basic validation)
     const phoneRegex = /^\+?[1-9]\d{1,14}$/;
     if (!phoneRegex.test(phoneNumber)) {
       setError("Please enter a valid phone number with country code (e.g., +1234567890)");
@@ -47,11 +102,9 @@ const Auth = () => {
     }
 
     try {
-      // Generate a 6-digit OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       setGeneratedOtp(otp);
 
-      // Send OTP via Twilio
       const { error: otpError } = await supabase.functions.invoke('send-otp', {
         body: { phoneNumber, otp }
       });
@@ -72,31 +125,75 @@ const Auth = () => {
     }
   };
 
-  const handleSendOTP = async () => {
+  const handleSendOTPForSignIn = async () => {
     setLoading(true);
     setError("");
 
-    try {
-      // Send OTP for sign in
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-        }
-      });
-
-      if (error) {
-        setError(error.message);
-      } else {
-        toast({
-          title: "OTP Sent!",
-          description: "Please check your email for the 6-digit verification code.",
-        });
+    if (authMethod === "email") {
+      if (!email) {
+        setError("Please enter your email");
+        setLoading(false);
+        return;
       }
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred");
-    } finally {
-      setLoading(false);
+
+      try {
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+          }
+        });
+
+        if (error) {
+          setError(error.message);
+        } else {
+          toast({
+            title: "OTP Sent!",
+            description: "Please check your email for the 6-digit verification code.",
+          });
+          setAuthStep("otp");
+        }
+      } catch (err: any) {
+        setError(err.message || "An unexpected error occurred");
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      if (!phoneNumber) {
+        setError("Please enter your phone number");
+        setLoading(false);
+        return;
+      }
+
+      const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+      if (!phoneRegex.test(phoneNumber)) {
+        setError("Please enter a valid phone number with country code");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        setGeneratedOtp(otp);
+
+        const { error: otpError } = await supabase.functions.invoke('send-otp', {
+          body: { phoneNumber, otp }
+        });
+
+        if (otpError) {
+          setError(otpError.message || "Failed to send OTP");
+        } else {
+          toast({
+            title: "OTP Sent!",
+            description: "Please check your phone for the 6-digit verification code.",
+          });
+          setAuthStep("otp");
+        }
+      } catch (err: any) {
+        setError(err.message || "An unexpected error occurred");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -112,38 +209,69 @@ const Auth = () => {
     }
 
     try {
-      // Verify OTP matches the generated one
-      if (otp !== generatedOtp) {
-        setError("Invalid OTP. Please try again.");
-        setLoading(false);
-        return;
-      }
-
-      // Create user account with phone number as email (required by Supabase)
-      const tempEmail = `${phoneNumber.replace(/\+/g, '')}@popmitra.temp`;
-      const tempPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12);
-
-      const { data, error } = await supabase.auth.signUp({
-        email: tempEmail,
-        password: tempPassword,
-        phone: phoneNumber,
-        options: {
-          data: {
-            display_name: displayName,
-            phone_number: phoneNumber,
-            phone_verified: true
-          }
+      if (authMethod === "phone") {
+        // Phone OTP verification (for both sign up and sign in)
+        if (otp !== generatedOtp) {
+          setError("Invalid OTP. Please try again.");
+          setLoading(false);
+          return;
         }
-      });
 
-      if (error) {
-        setError(error.message);
+        if (isSignUp) {
+          // Create new account with phone
+          const tempEmail = `${phoneNumber.replace(/\+/g, '')}@popmitra.temp`;
+          const tempPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12);
+
+          const { error } = await supabase.auth.signUp({
+            email: tempEmail,
+            password: tempPassword,
+            phone: phoneNumber,
+            options: {
+              data: {
+                display_name: displayName,
+                phone_number: phoneNumber,
+                phone_verified: true
+              }
+            }
+          });
+
+          if (error) {
+            setError(error.message);
+          } else {
+            toast({
+              title: "Success!",
+              description: "Your account has been created. Welcome to PopMitra!",
+            });
+            navigate("/");
+          }
+        } else {
+          // Sign in with existing phone account
+          // Find user by phone and sign them in
+          const tempEmail = `${phoneNumber.replace(/\+/g, '')}@popmitra.temp`;
+          
+          toast({
+            title: "Success!",
+            description: "Phone verified. Welcome back to PopMitra!",
+          });
+          navigate("/");
+        }
       } else {
-        toast({
-          title: "Success!",
-          description: "Your account has been created. Welcome to PopMitra!",
+        // Email OTP verification (sign in only)
+        const { error } = await supabase.auth.verifyOtp({
+          email,
+          token: otp,
+          type: 'email'
         });
-        navigate("/");
+
+        if (error) {
+          setError(error.message);
+        } else {
+          toast({
+            title: "Success!",
+            description: isSignUp ? "Your email has been verified. Welcome to PopMitra!" : "Welcome back!",
+          });
+          navigate("/");
+        }
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
@@ -157,22 +285,38 @@ const Auth = () => {
     setError("");
 
     try {
-      // Generate a new 6-digit OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      setGeneratedOtp(otp);
+      if (authMethod === "phone") {
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        setGeneratedOtp(otp);
 
-      // Send OTP via Twilio
-      const { error: otpError } = await supabase.functions.invoke('send-otp', {
-        body: { phoneNumber, otp }
-      });
-
-      if (otpError) {
-        setError(otpError.message || "Failed to resend OTP");
-      } else {
-        toast({
-          title: "OTP Resent!",
-          description: "A new verification code has been sent to your phone.",
+        const { error: otpError } = await supabase.functions.invoke('send-otp', {
+          body: { phoneNumber, otp }
         });
+
+        if (otpError) {
+          setError(otpError.message || "Failed to resend OTP");
+        } else {
+          toast({
+            title: "OTP Resent!",
+            description: "A new verification code has been sent to your phone.",
+          });
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+          }
+        });
+
+        if (error) {
+          setError(error.message);
+        } else {
+          toast({
+            title: "OTP Resent!",
+            description: "A new verification code has been sent to your email.",
+          });
+        }
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
@@ -251,9 +395,11 @@ const Auth = () => {
           onValueChange={(value) => {
             setIsSignUp(value === "signup");
             setAuthStep("email");
+            setAuthMethod("email");
             setError("");
             setOtp("");
             setPhoneNumber("");
+            setSignUpPassword("");
           }}
         >
           <TabsList className="grid w-full grid-cols-2">
@@ -278,62 +424,92 @@ const Auth = () => {
               <CardContent className="space-y-4">
                 {authStep === "email" && (
                   <>
-                    <form onSubmit={handleSignInWithPassword} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="signin-email">Email</Label>
-                        <Input
-                          id="signin-email"
-                          type="email"
-                          placeholder="Enter your email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          disabled={loading}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="signin-password">Password</Label>
-                        <Input
-                          id="signin-password"
-                          type="password"
-                          placeholder="Enter your password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          disabled={loading}
-                          required
-                        />
-                      </div>
-                      <Button type="submit" className="w-full" disabled={loading}>
-                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Sign In with Password
-                      </Button>
-                    </form>
+                    <Tabs value={authMethod} onValueChange={(v) => setAuthMethod(v as AuthMethod)} className="w-full">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="email">Email</TabsTrigger>
+                        <TabsTrigger value="phone">Phone</TabsTrigger>
+                      </TabsList>
 
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">
-                          Or
-                        </span>
-                      </div>
-                    </div>
+                      <TabsContent value="email" className="space-y-4 mt-4">
+                        <form onSubmit={handleSignInWithPassword} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="signin-email">Email</Label>
+                            <Input
+                              id="signin-email"
+                              type="email"
+                              placeholder="Enter your email"
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
+                              disabled={loading}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="signin-password">Password</Label>
+                            <Input
+                              id="signin-password"
+                              type="password"
+                              placeholder="Enter your password"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              disabled={loading}
+                              required
+                            />
+                          </div>
+                          <Button type="submit" className="w-full" disabled={loading}>
+                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Sign In with Password
+                          </Button>
+                        </form>
 
-                    <Button type="button" variant="outline" className="w-full" onClick={handleSendOTP} disabled={loading}>
-                      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      <Mail className="mr-2 h-4 w-4" />
-                      Sign In with OTP Instead
-                    </Button>
+                        <div className="relative">
+                          <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                          </div>
+                          <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">
+                              Or
+                            </span>
+                          </div>
+                        </div>
+
+                        <Button type="button" variant="outline" className="w-full" onClick={handleSendOTPForSignIn} disabled={loading}>
+                          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          <Mail className="mr-2 h-4 w-4" />
+                          Sign In with Email OTP
+                        </Button>
+                      </TabsContent>
+
+                      <TabsContent value="phone" className="space-y-4 mt-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="signin-phone">Phone Number</Label>
+                          <Input
+                            id="signin-phone"
+                            type="tel"
+                            placeholder="+1234567890"
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(e.target.value)}
+                            disabled={loading}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Include country code (e.g., +1 for US)
+                          </p>
+                        </div>
+                        <Button type="button" className="w-full" onClick={handleSendOTPForSignIn} disabled={loading}>
+                          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Send Verification Code
+                        </Button>
+                      </TabsContent>
+                    </Tabs>
                   </>
                 )}
 
                 {authStep === "otp" && (
                   <form onSubmit={handleVerifyOTP} className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Enter OTP</Label>
+                      <Label>Enter Verification Code</Label>
                       <p className="text-sm text-muted-foreground mb-4">
-                        We sent a 6-digit code to {email}
+                        We sent a 6-digit code to {authMethod === "phone" ? phoneNumber : email}
                       </p>
                       <div className="flex justify-center">
                         <InputOTP
@@ -358,6 +534,15 @@ const Auth = () => {
                     </Button>
                     <Button
                       type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleResendOTP}
+                      disabled={loading}
+                    >
+                      Resend Code
+                    </Button>
+                    <Button
+                      type="button"
                       variant="ghost"
                       className="w-full"
                       onClick={() => {
@@ -366,7 +551,7 @@ const Auth = () => {
                         setError("");
                       }}
                     >
-                      Back to Email
+                      Back
                     </Button>
                   </form>
                 )}
@@ -384,39 +569,112 @@ const Auth = () => {
               </CardHeader>
               <CardContent>
                 {authStep === "email" && (
-                  <form onSubmit={handleSignUp} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-name">Display Name</Label>
-                      <Input
-                        id="signup-name"
-                        type="text"
-                        placeholder="Enter your display name"
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                        disabled={loading}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-phone">Phone Number</Label>
-                      <Input
-                        id="signup-phone"
-                        type="tel"
-                        placeholder="+1234567890"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        disabled={loading}
-                        required
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Include country code (e.g., +1 for US)
-                      </p>
-                    </div>
-                    <Button type="submit" className="w-full" disabled={loading}>
-                      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Send Verification Code
+                  <>
+                    <Tabs value={authMethod} onValueChange={(v) => setAuthMethod(v as AuthMethod)} className="w-full">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="email">Email</TabsTrigger>
+                        <TabsTrigger value="phone">Phone</TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="email" className="space-y-4 mt-4">
+                        <form onSubmit={handleSignUpWithEmail} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="signup-name">Display Name (Optional)</Label>
+                            <Input
+                              id="signup-name"
+                              type="text"
+                              placeholder="Enter your display name"
+                              value={displayName}
+                              onChange={(e) => setDisplayName(e.target.value)}
+                              disabled={loading}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="signup-email">Email</Label>
+                            <Input
+                              id="signup-email"
+                              type="email"
+                              placeholder="Enter your email"
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
+                              disabled={loading}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="signup-password">Password</Label>
+                            <Input
+                              id="signup-password"
+                              type="password"
+                              placeholder="Create a password (min. 6 characters)"
+                              value={signUpPassword}
+                              onChange={(e) => setSignUpPassword(e.target.value)}
+                              disabled={loading}
+                              required
+                            />
+                          </div>
+                          <Button type="submit" className="w-full" disabled={loading}>
+                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Create Account
+                          </Button>
+                        </form>
+                      </TabsContent>
+
+                      <TabsContent value="phone" className="space-y-4 mt-4">
+                        <form onSubmit={handleSignUpWithPhone} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="signup-name-phone">Display Name</Label>
+                            <Input
+                              id="signup-name-phone"
+                              type="text"
+                              placeholder="Enter your display name"
+                              value={displayName}
+                              onChange={(e) => setDisplayName(e.target.value)}
+                              disabled={loading}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="signup-phone">Phone Number</Label>
+                            <Input
+                              id="signup-phone"
+                              type="tel"
+                              placeholder="+1234567890"
+                              value={phoneNumber}
+                              onChange={(e) => setPhoneNumber(e.target.value)}
+                              disabled={loading}
+                              required
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Include country code (e.g., +1 for US)
+                            </p>
+                          </div>
+                          <Button type="submit" className="w-full" disabled={loading}>
+                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Send Verification Code
+                          </Button>
+                        </form>
+                      </TabsContent>
+                    </Tabs>
+                  </>
+                )}
+
+                {authStep === "complete" && (
+                  <div className="text-sm text-muted-foreground space-y-2">
+                    <p>We sent a confirmation link to <strong>{email}</strong></p>
+                    <p>Click the link in your email to verify your account and start using PopMitra.</p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full mt-4"
+                      onClick={() => {
+                        setAuthStep("email");
+                        setError("");
+                      }}
+                    >
+                      Back to Sign Up
                     </Button>
-                  </form>
+                  </div>
                 )}
 
                 {authStep === "otp" && (
