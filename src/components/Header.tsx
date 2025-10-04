@@ -52,10 +52,12 @@ export const Header = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={showComingSoon}>
-                    <User className="w-4 h-4 mr-2" />
-                    Profile
-                  </DropdownMenuItem>
+                  <Link to="/profile">
+                    <DropdownMenuItem>
+                      <User className="w-4 h-4 mr-2" />
+                      Profile
+                    </DropdownMenuItem>
+                  </Link>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => signOut()}>
                     <LogOut className="w-4 h-4 mr-2" />
@@ -65,12 +67,12 @@ export const Header = () => {
               </DropdownMenu>
             ) : (
               <div className="flex items-center gap-4">
-                <Link to="/auth">
+                <Link to="/signin">
                   <Button variant="ghost">
                     Sign In
                   </Button>
                 </Link>
-                <Link to="/auth">
+                <Link to="/signup">
                   <Button variant="default">
                     Try Free
                   </Button>
@@ -121,12 +123,12 @@ export const Header = () => {
                 </div>
               ) : (
                 <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-border">
-                  <Link to="/auth">
+                  <Link to="/signin">
                     <Button variant="ghost" className="justify-start w-full">
                       Sign In
                     </Button>
                   </Link>
-                  <Link to="/auth">
+                  <Link to="/signup">
                     <Button variant="default" className="justify-start w-full">
                       Try Free
                     </Button>
