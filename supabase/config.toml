@@ -2,3 +2,9 @@ project_id = "jtqkfkjrmdtgwxrjtcdy"
 
 [functions.send-otp]
 verify_jwt = false
+
+[functions.signup]
+verify_jwt = false
+
+[functions.verify-otp]
+verify_jwt = false

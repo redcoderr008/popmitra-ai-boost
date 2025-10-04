@@ -62,49 +62,31 @@ const SignUp = () => {
     }
 
     try {
-      if (inputIsEmail) {
-        // Email signup - send verification email
-        const { data, error } = await supabase.auth.signUp({
-          email: emailOrPhone,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`,
-            data: {
-              display_name: fullName
-            }
-          }
-        });
-
-        if (error) {
-          setError(error.message);
-        } else if (data.user) {
-          toast({
-            title: "Check Your Email!",
-            description: "We sent a verification code to your email.",
-          });
-          setAuthMethod("email");
-          setAuthStep("otp");
+      // Call signup edge function
+      const { data, error } = await supabase.functions.invoke('signup', {
+        body: {
+          fullName,
+          email: inputIsEmail ? emailOrPhone : undefined,
+          phone: inputIsPhone ? emailOrPhone : undefined,
+          password
         }
-      } else {
-        // Phone signup - send OTP via Twilio
-        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        setGeneratedOtp(otpCode);
+      });
 
-        const { error: functionError } = await supabase.functions.invoke('send-otp', {
-          body: { phoneNumber: emailOrPhone, otp: otpCode }
-        });
-
-        if (functionError) {
-          throw new Error(functionError.message);
-        }
-
-        toast({
-          title: "Code Sent!",
-          description: "We sent a verification code to your phone.",
-        });
-        setAuthMethod("phone");
-        setAuthStep("otp");
+      if (error) {
+        throw new Error(error.message);
       }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      toast({
+        title: "Verification Code Sent!",
+        description: `We sent a 6-digit code to your ${inputIsEmail ? 'email' : 'phone'}.`,
+      });
+
+      setAuthMethod(inputIsEmail ? "email" : "phone");
+      setAuthStep("otp");
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
     } finally {
@@ -124,55 +106,30 @@ const SignUp = () => {
     }
 
     try {
-      if (authMethod === "email") {
-        // Verify email OTP
-        const { error } = await supabase.auth.verifyOtp({
-          email: emailOrPhone,
-          token: otp,
-          type: 'email'
-        });
-
-        if (error) {
-          setError(error.message);
-        } else {
-          toast({
-            title: "Account Created!",
-            description: "Welcome to PopMitra!",
-          });
-          navigate("/");
+      // Call verify-otp edge function
+      const { data, error } = await supabase.functions.invoke('verify-otp', {
+        body: {
+          email: authMethod === "email" ? emailOrPhone : undefined,
+          phone: authMethod === "phone" ? emailOrPhone : undefined,
+          otp
         }
-      } else {
-        // Verify phone OTP
-        if (otp !== generatedOtp) {
-          setError("Invalid verification code");
-          setLoading(false);
-          return;
-        }
+      });
 
-        // Create user with phone number
-        const tempEmail = `${emailOrPhone.replace(/[^0-9]/g, '')}@temp.popmitra.com`;
-        const { data, error } = await supabase.auth.signUp({
-          email: tempEmail,
-          password,
-          phone: emailOrPhone,
-          options: {
-            data: {
-              display_name: fullName,
-              phone_number: emailOrPhone
-            }
-          }
-        });
-
-        if (error) {
-          setError(error.message);
-        } else {
-          toast({
-            title: "Account Created!",
-            description: "Welcome to PopMitra!",
-          });
-          navigate("/");
-        }
+      if (error) {
+        throw new Error(error.message);
       }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      toast({
+        title: "Account Created!",
+        description: "Welcome to PopMitra! Please sign in to continue.",
+      });
+
+      // Redirect to sign in page
+      navigate("/signin");
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
     } finally {
@@ -185,43 +142,29 @@ const SignUp = () => {
     setError("");
 
     try {
-      if (authMethod === "email") {
-        const { error } = await supabase.auth.signUp({
-          email: emailOrPhone,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`,
-            data: {
-              display_name: fullName
-            }
-          }
-        });
-
-        if (error) {
-          setError(error.message);
-        } else {
-          toast({
-            title: "Code Resent!",
-            description: "Check your email for a new verification code.",
-          });
+      // Resend by calling signup function again
+      const inputIsEmail = isEmail(emailOrPhone);
+      const { data, error } = await supabase.functions.invoke('signup', {
+        body: {
+          fullName,
+          email: inputIsEmail ? emailOrPhone : undefined,
+          phone: !inputIsEmail ? emailOrPhone : undefined,
+          password
         }
-      } else {
-        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        setGeneratedOtp(otpCode);
+      });
 
-        const { error } = await supabase.functions.invoke('send-otp', {
-          body: { phoneNumber: emailOrPhone, otp: otpCode }
-        });
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        toast({
-          title: "Code Resent!",
-          description: "Check your phone for a new verification code.",
-        });
+      if (error) {
+        throw new Error(error.message);
       }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      toast({
+        title: "Code Resent!",
+        description: `Check your ${authMethod === "email" ? "email" : "phone"} for a new verification code.`,
+      });
     } catch (err: any) {
       setError(err.message || "Failed to resend code");
     } finally {
