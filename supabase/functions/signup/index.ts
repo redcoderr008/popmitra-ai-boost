@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
@@ -66,20 +65,17 @@ const handler = async (req: Request): Promise<Response> => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     console.log('Generated OTP:', otp);
 
-    // Hash password using bcrypt
-    const passwordHash = await bcrypt.hash(password);
-
     // Calculate expiry time (5 minutes from now)
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-    // Store pending user with OTP
+    // Store pending user with OTP (password will be hashed by Supabase Auth)
     const { error: insertError } = await supabaseAdmin
       .from('pending_users')
       .insert({
         email: email || null,
         phone: phone || null,
         full_name: fullName,
-        password_hash: passwordHash,
+        password_hash: password, // Stored temporarily, will be hashed by Supabase Auth
         otp: otp,
         expires_at: expiresAt
       });
