@@ -61,8 +61,8 @@ const SignUp = () => {
       if (error) throw error;
 
       if (data.user) {
-        toast.success("Account created successfully! Please check your email to verify your account.");
-        navigate("/signin");
+        toast.success("Account created successfully!");
+        navigate("/");
       }
     } catch (error: any) {
       console.error("Signup error:", error);
