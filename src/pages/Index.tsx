@@ -19,6 +19,8 @@ const Index = () => {
   const [generatedContent, setGeneratedContent] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState("");
+  const [generationProgress, setGenerationProgress] = useState(0);
   const inputRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -47,11 +49,36 @@ const Index = () => {
     }
 
     setIsGenerating(true);
+    setGenerationProgress(0);
     
     try {
+      // Stage 1: Sending data
+      setGenerationStatus("Sending data...");
+      setGenerationProgress(20);
+      await new Promise(resolve => setTimeout(resolve, 400));
+      
+      // Stage 2: Processing data
+      setGenerationStatus("Processing data...");
+      setGenerationProgress(40);
+      await new Promise(resolve => setTimeout(resolve, 400));
+      
+      // Stage 3: Connecting to API
+      setGenerationStatus("Connecting to API...");
+      setGenerationProgress(60);
+      await new Promise(resolve => setTimeout(resolve, 400));
+      
+      // Stage 4: Generating content
+      setGenerationStatus("Generating content...");
+      setGenerationProgress(80);
+      
       const { data, error } = await supabase.functions.invoke('generate-content', {
         body: { description, settings }
       });
+      
+      // Stage 5: Getting data from API
+      setGenerationStatus("Getting data from API");
+      setGenerationProgress(95);
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       if (error) {
         console.error('Edge function error:', error);
@@ -65,6 +92,11 @@ const Index = () => {
       if (!data?.titles || !data?.description || !data?.hashtags) {
         throw new Error('Invalid response format');
       }
+      
+      // Stage 6: Done
+      setGenerationStatus("Done!");
+      setGenerationProgress(100);
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       setGeneratedContent(data);
       
@@ -90,6 +122,8 @@ const Index = () => {
       });
     } finally {
       setIsGenerating(false);
+      setGenerationStatus("");
+      setGenerationProgress(0);
     }
   };
 
@@ -147,6 +181,8 @@ const Index = () => {
         <InputSection 
           onGenerate={handleGenerate}
           isGenerating={isGenerating}
+          generationStatus={generationStatus}
+          generationProgress={generationProgress}
           remainingGenerations={getRemainingGenerations()}
           isAuthenticated={isAuthenticated}
           isEmailVerified={isEmailVerified}

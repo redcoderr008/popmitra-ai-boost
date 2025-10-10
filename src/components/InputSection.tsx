@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Progress } from "@/components/ui/progress";
 import { Wand2, Upload, Type, Lock, Settings, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,12 +22,14 @@ interface GenerationSettings {
 interface InputSectionProps {
   onGenerate: (description: string, settings?: GenerationSettings) => void;
   isGenerating: boolean;
+  generationStatus?: string;
+  generationProgress?: number;
   remainingGenerations: number | string;
   isAuthenticated: boolean;
   isEmailVerified?: boolean;
 }
 
-export const InputSection = ({ onGenerate, isGenerating, remainingGenerations, isAuthenticated, isEmailVerified = false }: InputSectionProps) => {
+export const InputSection = ({ onGenerate, isGenerating, generationStatus = "", generationProgress = 0, remainingGenerations, isAuthenticated, isEmailVerified = false }: InputSectionProps) => {
   const [description, setDescription] = useState("");
   const [inputMode, setInputMode] = useState<"text" | "upload">("text");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -357,30 +360,43 @@ Example: 'A travel vlog showing the top 5 hidden beaches in Bali with stunning s
                 </CollapsibleContent>
               </Collapsible>
               
-              <Button
-                type="submit" 
-                variant="gradient" 
-                size="lg" 
-                className="w-full"
-                disabled={
-                  (inputMode === "text" && !description.trim()) || 
-                  (inputMode === "upload" && !uploadedFile) || 
-                  isGenerating || 
-                  isUploading
-                }
-              >
-                {isGenerating ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="w-5 h-5 mr-2" />
-                    Generate Content
-                  </>
+              <div className="space-y-3">
+                <Button
+                  type="submit" 
+                  variant="gradient" 
+                  size="lg" 
+                  className="w-full"
+                  disabled={
+                    (inputMode === "text" && !description.trim()) || 
+                    (inputMode === "upload" && !uploadedFile) || 
+                    isGenerating || 
+                    isUploading
+                  }
+                >
+                  {isGenerating ? (
+                    <div className="flex flex-col items-center gap-2 w-full">
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                        <span>{generationStatus}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <Wand2 className="w-5 h-5 mr-2" />
+                      Generate Content
+                    </>
+                  )}
+                </Button>
+                
+                {isGenerating && (
+                  <div className="space-y-2">
+                    <Progress value={generationProgress} className="h-2" />
+                    <p className="text-xs text-center text-muted-foreground">
+                      {Math.round(generationProgress)}% complete
+                    </p>
+                  </div>
                 )}
-              </Button>
+              </div>
               
               {/* Usage Counter */}
               <div className="text-center mt-4">
