@@ -77,11 +77,53 @@ export type Database = {
         }
         Relationships: []
       }
+      signup_rate_limits: {
+        Row: {
+          attempts: number
+          blocked_until: string | null
+          created_at: string
+          first_attempt_at: string
+          id: string
+          identifier: string
+          identifier_type: string
+          last_attempt_at: string
+        }
+        Insert: {
+          attempts?: number
+          blocked_until?: string | null
+          created_at?: string
+          first_attempt_at?: string
+          id?: string
+          identifier: string
+          identifier_type: string
+          last_attempt_at?: string
+        }
+        Update: {
+          attempts?: number
+          blocked_until?: string | null
+          created_at?: string
+          first_attempt_at?: string
+          id?: string
+          identifier?: string
+          identifier_type?: string
+          last_attempt_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      check_signup_rate_limit: {
+        Args: {
+          _identifier: string
+          _identifier_type: string
+          _max_attempts?: number
+          _window_minutes?: number
+        }
+        Returns: Json
+      }
       cleanup_expired_otps: {
         Args: Record<PropertyKey, never>
         Returns: undefined

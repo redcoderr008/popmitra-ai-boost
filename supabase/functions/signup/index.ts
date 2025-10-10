@@ -46,6 +46,29 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
+    // Check rate limits (3 attempts per hour per email/phone)
+    const identifier = email || phone || '';
+    const identifierType = email ? 'email' : 'phone';
+    
+    const { data: rateLimitResult, error: rateLimitError } = await supabaseAdmin
+      .rpc('check_signup_rate_limit', {
+        _identifier: identifier,
+        _identifier_type: identifierType,
+        _max_attempts: 3,
+        _window_minutes: 60
+      });
+
+    if (rateLimitError) {
+      console.error('Rate limit check error:', rateLimitError);
+      throw new Error('Service temporarily unavailable. Please try again later.');
+    }
+
+    if (!rateLimitResult.allowed) {
+      const resetDate = new Date(rateLimitResult.reset_at);
+      const minutesUntilReset = Math.ceil((resetDate.getTime() - Date.now()) / 60000);
+      throw new Error(`Too many signup attempts. Please try again in ${minutesUntilReset} minutes.`);
+    }
+
     // Check if user already exists in pending_users
     const { data: existingPending } = await supabaseAdmin
       .from('pending_users')
@@ -63,7 +86,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log('Generated OTP:', otp);
+    console.log('OTP generated successfully for:', email || phone);
 
     // Calculate expiry time (5 minutes from now)
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
