@@ -7,8 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Star, ArrowLeft } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 
 interface Review {
   id: string;
@@ -16,9 +16,6 @@ interface Review {
   rating: number;
   comment: string;
   created_at: string;
-  profiles?: {
-    display_name: string;
-  };
 }
 
 const Review = () => {
@@ -37,12 +34,7 @@ const Review = () => {
   const fetchReviews = async () => {
     const { data, error } = await supabase
       .from("reviews")
-      .select(`
-        *,
-        profiles (
-          display_name
-        )
-      `)
+      .select("*")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -230,7 +222,7 @@ const Review = () => {
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="text-lg">
-                        {review.profiles?.display_name || "Anonymous User"}
+                        Anonymous User
                       </CardTitle>
                       <CardDescription>
                         {new Date(review.created_at).toLocaleDateString("en-US", {
