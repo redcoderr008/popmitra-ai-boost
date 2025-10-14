@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Star, ArrowLeft } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Header } from "@/components/Header";
@@ -16,6 +17,10 @@ interface Review {
   rating: number;
   comment: string;
   created_at: string;
+  is_anonymous: boolean;
+  profiles?: {
+    display_name: string | null;
+  } | null;
 }
 
 const Review = () => {
@@ -24,6 +29,7 @@ const Review = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
@@ -34,7 +40,12 @@ const Review = () => {
   const fetchReviews = async () => {
     const { data, error } = await supabase
       .from("reviews")
-      .select("*")
+      .select(`
+        *,
+        profiles (
+          display_name
+        )
+      `)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -85,6 +96,7 @@ const Review = () => {
       user_id: user.id,
       rating,
       comment: comment.trim(),
+      is_anonymous: isAnonymous,
     });
 
     setIsSubmitting(false);
@@ -102,6 +114,7 @@ const Review = () => {
       });
       setRating(0);
       setComment("");
+      setIsAnonymous(false);
       setShowForm(false);
       fetchReviews();
     }
@@ -182,6 +195,20 @@ const Review = () => {
                     </p>
                   </div>
 
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="anonymous"
+                      checked={isAnonymous}
+                      onCheckedChange={(checked) => setIsAnonymous(checked as boolean)}
+                    />
+                    <label
+                      htmlFor="anonymous"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      Post anonymously
+                    </label>
+                  </div>
+
                   <div className="flex gap-4">
                     <Button type="submit" disabled={isSubmitting}>
                       {isSubmitting ? "Submitting..." : "Submit Review"}
@@ -193,6 +220,7 @@ const Review = () => {
                         setShowForm(false);
                         setRating(0);
                         setComment("");
+                        setIsAnonymous(false);
                       }}
                     >
                       Cancel
@@ -222,7 +250,9 @@ const Review = () => {
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="text-lg">
-                        Anonymous User
+                        {review.is_anonymous 
+                          ? "Anonymous User" 
+                          : (review.profiles?.display_name || "User")}
                       </CardTitle>
                       <CardDescription>
                         {new Date(review.created_at).toLocaleDateString("en-US", {
