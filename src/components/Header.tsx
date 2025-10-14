@@ -41,6 +41,9 @@ export const Header = () => {
               <a href="#about" className="text-muted-foreground hover:text-foreground transition-colors">
                 About
               </a>
+              <Link to="/review" className="text-muted-foreground hover:text-foreground transition-colors">
+                Reviews
+              </Link>
             </nav>
 
             {user ? (
@@ -109,6 +112,9 @@ export const Header = () => {
               <a href="#about" className="text-muted-foreground hover:text-foreground transition-colors">
                 About
               </a>
+              <Link to="/review" className="text-muted-foreground hover:text-foreground transition-colors">
+                Reviews
+              </Link>
               
               {user ? (
                 <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-border">

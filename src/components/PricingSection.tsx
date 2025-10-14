@@ -83,6 +83,7 @@ export const PricingSection = () => {
                 key={plan.name} 
                 className={`
                   shadow-medium animate-slide-up relative overflow-hidden
+                  transition-all duration-300 hover:ring-2 hover:ring-primary hover:shadow-strong
                   ${plan.popular ? 'ring-2 ring-primary shadow-strong' : ''}
                 `}
                 style={{ animationDelay: `${index * 0.1}s` }}
