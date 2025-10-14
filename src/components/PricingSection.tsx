@@ -22,7 +22,7 @@ const plans = [
   },
   {
     name: "Pro",
-    price: "$15",
+    price: "$6",
     period: "/month",
     description: "For serious content creators",
     icon: Zap,
@@ -41,7 +41,7 @@ const plans = [
   },
   {
     name: "Business",
-    price: "$50",
+    price: "$69",
     period: "/month",
     description: "For teams and agencies",
     icon: Crown,
