@@ -197,13 +197,13 @@ const Index = () => {
           />
         </div>
         
-        <Testimonials />
-        
         <UserMetrics />
         
         <div id="pricing">
           <PricingSection />
         </div>
+        
+        <Testimonials />
         
         <About />
       </main>

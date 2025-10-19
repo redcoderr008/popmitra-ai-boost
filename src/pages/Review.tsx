@@ -18,9 +18,6 @@ interface Review {
   comment: string;
   created_at: string;
   is_anonymous: boolean;
-  profiles?: {
-    display_name: string | null;
-  } | null;
 }
 
 const Review = () => {
@@ -40,12 +37,7 @@ const Review = () => {
   const fetchReviews = async () => {
     const { data, error } = await supabase
       .from("reviews")
-      .select(`
-        *,
-        profiles (
-          display_name
-        )
-      `)
+      .select("*")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -250,9 +242,7 @@ const Review = () => {
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="text-lg">
-                        {review.is_anonymous 
-                          ? "Anonymous User" 
-                          : (review.profiles?.display_name || "User")}
+                        {review.is_anonymous ? "Anonymous User" : "User"}
                       </CardTitle>
                       <CardDescription>
                         {new Date(review.created_at).toLocaleDateString("en-US", {
