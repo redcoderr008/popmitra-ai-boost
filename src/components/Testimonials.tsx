@@ -66,5 +66,54 @@ const platformColors = {
   Brand: "bg-orange-500/10 text-orange-700 dark:text-orange-300"
 };
 export const Testimonials = () => {
-  return null;
+  return (
+    <section className="py-20 px-4">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            What Our Users Say
+          </h2>
+          <p className="text-muted-foreground text-lg">
+            Join thousands of satisfied content creators
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {testimonials.map((testimonial) => (
+            <Card key={testimonial.id} className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4 mb-4">
+                  <Avatar>
+                    <AvatarImage src={testimonial.avatar} alt={testimonial.name} />
+                    <AvatarFallback>{testimonial.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">{testimonial.name}</h3>
+                    <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                  </div>
+                  <Badge className={platformColors[testimonial.platform as keyof typeof platformColors]}>
+                    {testimonial.platform}
+                  </Badge>
+                </div>
+                
+                <div className="flex mb-3">
+                  {Array.from({ length: testimonial.rating }).map((_, i) => (
+                    <Star key={i} className="w-4 h-4 fill-primary text-primary" />
+                  ))}
+                </div>
+                
+                <Quote className="w-8 h-8 text-muted-foreground/20 mb-2" />
+                <p className="text-foreground mb-4">{testimonial.content}</p>
+                
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <TrendingUp className="w-4 h-4" />
+                  <span>{testimonial.stats}</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
 };
