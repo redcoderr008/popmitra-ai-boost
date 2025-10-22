@@ -18,6 +18,7 @@ interface Review {
   comment: string;
   created_at: string;
   is_anonymous: boolean;
+  display_name?: string;
 }
 
 const Review = () => {
@@ -37,7 +38,10 @@ const Review = () => {
   const fetchReviews = async () => {
     const { data, error } = await supabase
       .from("reviews")
-      .select("*")
+      .select(`
+        *,
+        profiles!reviews_user_id_fkey(display_name)
+      `)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -47,7 +51,11 @@ const Review = () => {
         variant: "destructive",
       });
     } else {
-      setReviews(data || []);
+      const formattedData = data?.map((review: any) => ({
+        ...review,
+        display_name: review.profiles?.display_name,
+      }));
+      setReviews(formattedData || []);
     }
   };
 
@@ -242,7 +250,7 @@ const Review = () => {
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="text-lg">
-                        {review.is_anonymous ? "Anonymous User" : "User"}
+                        {review.is_anonymous ? "Anonymous User" : (review.display_name || "User")}
                       </CardTitle>
                       <CardDescription>
                         {new Date(review.created_at).toLocaleDateString("en-US", {
