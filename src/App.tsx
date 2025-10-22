@@ -18,7 +18,15 @@ import { useEffect } from "react";
 const queryClient = new QueryClient();
 
 // --- GA Helper Component ---
-const GA_MEASUREMENT_ID = "G-8R1GRY3RNC"; // Replace with your GA Measurement ID
+const GA_MEASUREMENT_ID = "G-8R1GRY3RNC";
+
+// Extend Window interface for gtag
+declare global {
+  interface Window {
+    gtag?: (...args: any[]) => void;
+    dataLayer?: any[];
+  }
+}
 
 const GAListener: React.FC = () => {
   const location = useLocation();
