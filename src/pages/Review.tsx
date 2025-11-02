@@ -58,7 +58,7 @@ const Review = () => {
           .from("profiles")
           .select("display_name")
           .eq("user_id", review.user_id)
-          .single();
+          .maybeSingle();
         
         return {
           ...review,
