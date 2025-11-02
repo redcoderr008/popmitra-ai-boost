@@ -153,36 +153,35 @@ const Review = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() => navigate("/")}
-            >
-              <Home className="w-5 h-5 mr-2" />
-              Home
-            </Button>
-            <div>
-              <h1 className="text-4xl font-bold">Reviews</h1>
-              <p className="text-muted-foreground">
-                See what our users are saying about us
-              </p>
-            </div>
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl pt-24 md:pt-28">
+        <div className="flex flex-col md:flex-row md:items-center gap-4 mb-8">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => navigate("/")}
+            className="w-fit"
+          >
+            <Home className="w-5 h-5 mr-2" />
+            Home
+          </Button>
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold">Reviews</h1>
+            <p className="text-sm md:text-base text-muted-foreground">
+              See what our users are saying about us
+            </p>
           </div>
         </div>
 
         <div className="mb-8">
           {!showForm ? (
-            <Button onClick={() => setShowForm(true)} size="lg">
+            <Button onClick={() => setShowForm(true)} size="lg" className="w-full md:w-auto">
               Write a Review
             </Button>
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>Write Your Review</CardTitle>
-                <CardDescription>Share your experience with us</CardDescription>
+                <CardTitle className="text-xl md:text-2xl">Write Your Review</CardTitle>
+                <CardDescription className="text-sm md:text-base">Share your experience with us</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -223,8 +222,8 @@ const Review = () => {
                     </label>
                   </div>
 
-                  <div className="flex gap-4">
-                    <Button type="submit" disabled={isSubmitting}>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
                       {isSubmitting ? "Submitting..." : "Submit Review"}
                     </Button>
                     <Button
@@ -236,6 +235,7 @@ const Review = () => {
                         setComment("");
                         setIsAnonymous(false);
                       }}
+                      className="w-full sm:w-auto"
                     >
                       Cancel
                     </Button>
@@ -247,7 +247,7 @@ const Review = () => {
         </div>
 
         <div className="space-y-4">
-          <h2 className="text-2xl font-semibold mb-4">
+          <h2 className="text-xl md:text-2xl font-semibold mb-4">
             All Reviews ({reviews.length})
           </h2>
           
@@ -261,12 +261,12 @@ const Review = () => {
             reviews.map((review) => (
               <Card key={review.id}>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div className="flex-1">
+                      <CardTitle className="text-base md:text-lg">
                         {review.is_anonymous ? "Anonymous User" : (review.display_name || "User")}
                       </CardTitle>
-                      <CardDescription>
+                      <CardDescription className="text-xs md:text-sm">
                         {new Date(review.created_at).toLocaleDateString("en-US", {
                           year: "numeric",
                           month: "long",
@@ -278,7 +278,7 @@ const Review = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-foreground whitespace-pre-wrap">
+                  <p className="text-sm md:text-base text-foreground whitespace-pre-wrap break-words">
                     {review.comment}
                   </p>
                 </CardContent>
