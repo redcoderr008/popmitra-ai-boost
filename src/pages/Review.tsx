@@ -38,25 +38,36 @@ const Review = () => {
   const fetchReviews = async () => {
     const { data, error } = await supabase
       .from("reviews")
-      .select(`
-        *,
-        profiles(display_name)
-      `)
+      .select("*")
       .order("created_at", { ascending: false });
 
     if (error) {
+      console.error("Error fetching reviews:", error);
       toast({
         title: "Error",
         description: "Failed to load reviews",
         variant: "destructive",
       });
-    } else {
-      const formattedData = data?.map((review: any) => ({
-        ...review,
-        display_name: review.profiles?.display_name,
-      }));
-      setReviews(formattedData || []);
+      return;
     }
+
+    // Fetch display names separately for each review
+    const reviewsWithProfiles = await Promise.all(
+      (data || []).map(async (review) => {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("display_name")
+          .eq("user_id", review.user_id)
+          .single();
+        
+        return {
+          ...review,
+          display_name: profileData?.display_name,
+        };
+      })
+    );
+
+    setReviews(reviewsWithProfiles);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
