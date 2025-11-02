@@ -17,8 +17,8 @@ const plans = [
       "Community support"
     ],
     cta: "Try Free Now",
-    popular: false,
-    variant: "outline" as const
+    popular: true,
+    variant: "hero" as const
   },
   {
     name: "Pro",
@@ -36,8 +36,8 @@ const plans = [
       "Priority support"
     ],
     cta: "Start Pro Trial",
-    popular: true,
-    variant: "hero" as const
+    popular: false,
+    variant: "outline" as const
   },
   {
     name: "Business",
