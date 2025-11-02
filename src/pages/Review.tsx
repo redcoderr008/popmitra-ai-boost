@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Star, ArrowLeft } from "lucide-react";
+import { Star, ArrowLeft, Home } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -154,20 +154,23 @@ const Review = () => {
       <Header />
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/")}
-          className="mb-6"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Home
-        </Button>
-
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Reviews</h1>
-          <p className="text-muted-foreground">
-            See what our users are saying about us
-          </p>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => navigate("/")}
+            >
+              <Home className="w-5 h-5 mr-2" />
+              Home
+            </Button>
+            <div>
+              <h1 className="text-4xl font-bold">Reviews</h1>
+              <p className="text-muted-foreground">
+                See what our users are saying about us
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="mb-8">
