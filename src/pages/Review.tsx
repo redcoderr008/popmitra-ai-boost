@@ -40,7 +40,7 @@ const Review = () => {
       .from("reviews")
       .select(`
         *,
-        profiles!reviews_user_id_fkey(display_name)
+        profiles(display_name)
       `)
       .order("created_at", { ascending: false });
 
