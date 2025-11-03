@@ -35,6 +35,10 @@ const Review = () => {
     fetchReviews();
   }, []);
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   const fetchReviews = async () => {
     const { data, error } = await supabase
       .from("reviews")

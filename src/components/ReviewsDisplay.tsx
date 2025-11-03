@@ -119,7 +119,13 @@ export const ReviewsDisplay = () => {
           <p className="text-muted-foreground text-lg mb-6">
             Real reviews from our community
           </p>
-          <Button onClick={() => navigate("/review")} size="sm">
+          <Button 
+            onClick={() => {
+              navigate("/review");
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }} 
+            size="sm"
+          >
             Add Your Review
           </Button>
         </div>
