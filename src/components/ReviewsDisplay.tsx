@@ -31,7 +31,7 @@ export const ReviewsDisplay = () => {
 
     const interval = setInterval(() => {
       nextReview();
-    }, 1000);
+    }, 2000);
 
     return () => clearInterval(interval);
   }, [reviews.length, currentIndex]);
@@ -142,9 +142,9 @@ export const ReviewsDisplay = () => {
             </Button>
 
             <div className="overflow-hidden px-12">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 transition-all duration-700 ease-in-out">
                 {visibleReviews.map((review) => (
-                  <Card key={review.id} className="hover:shadow-lg transition-all animate-fade-in">
+                  <Card key={review.id} className="hover:shadow-lg transition-all duration-500 ease-in-out animate-fade-in">
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div>
