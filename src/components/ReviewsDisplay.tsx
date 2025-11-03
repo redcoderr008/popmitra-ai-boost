@@ -21,6 +21,7 @@ export const ReviewsDisplay = () => {
   const navigate = useNavigate();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
     fetchReviews();
@@ -30,7 +31,11 @@ export const ReviewsDisplay = () => {
     if (reviews.length === 0) return;
 
     const interval = setInterval(() => {
-      nextReview();
+      setIsTransitioning(true);
+      setTimeout(() => {
+        nextReview();
+        setIsTransitioning(false);
+      }, 500);
     }, 5000);
 
     return () => clearInterval(interval);
@@ -142,9 +147,17 @@ export const ReviewsDisplay = () => {
             </Button>
 
             <div className="overflow-hidden px-12">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 transition-all duration-700 ease-in-out">
-                {visibleReviews.map((review) => (
-                  <Card key={review.id} className="hover:shadow-lg transition-all duration-500 ease-in-out animate-fade-in">
+              <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 transition-all duration-500 ${
+                isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+              }`}>
+                {visibleReviews.map((review, index) => (
+                  <Card 
+                    key={review.id} 
+                    className="hover:shadow-lg transition-all duration-500 ease-in-out"
+                    style={{
+                      animationDelay: `${index * 100}ms`
+                    }}
+                  >
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div>
