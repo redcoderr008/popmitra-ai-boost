@@ -12,6 +12,9 @@ interface Review {
   comment: string;
   created_at: string;
   is_anonymous: boolean;
+  profiles?: {
+    display_name: string | null;
+  } | null;
 }
 
 export const ReviewsDisplay = () => {
@@ -24,14 +27,36 @@ export const ReviewsDisplay = () => {
   }, []);
 
   const fetchReviews = async () => {
-    const { data, error } = await supabase
+    const { data: reviewsData, error: reviewsError } = await supabase
       .from("reviews")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (!error && data) {
-      setReviews(data);
+    if (reviewsError || !reviewsData) {
+      return;
     }
+
+    // Fetch profiles for all user_ids
+    const userIds = [...new Set(reviewsData.map(r => r.user_id))];
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("user_id, display_name")
+      .in("user_id", userIds);
+
+    // Create a map of user_id to display_name
+    const profilesMap = new Map(
+      profilesData?.map(p => [p.user_id, p.display_name]) || []
+    );
+
+    // Merge reviews with profile data
+    const reviewsWithProfiles = reviewsData.map(review => ({
+      ...review,
+      profiles: profilesMap.has(review.user_id) 
+        ? { display_name: profilesMap.get(review.user_id) || null }
+        : null
+    }));
+
+    setReviews(reviewsWithProfiles);
   };
 
   const nextReview = () => {
@@ -108,7 +133,7 @@ export const ReviewsDisplay = () => {
                       <div className="flex items-start justify-between">
                         <div>
                           <CardTitle className="text-lg">
-                            {review.is_anonymous ? "Anonymous User" : "User"}
+                            {review.is_anonymous ? "Anonymous User" : (review.profiles?.display_name || "User")}
                           </CardTitle>
                           <CardDescription>
                             {new Date(review.created_at).toLocaleDateString("en-US", {
