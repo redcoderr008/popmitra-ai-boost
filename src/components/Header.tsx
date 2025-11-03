@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import { useComingSoon } from "@/hooks/useComingSoon";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +31,7 @@ export const Header = () => {
           </div>
 
           {/* Desktop Navigation & Auth */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-4">
             <nav className="flex items-center gap-8">
               <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
                 Features
@@ -42,6 +43,8 @@ export const Header = () => {
                 About
               </a>
             </nav>
+
+            <ThemeToggle />
 
             {user ? (
               <DropdownMenu>
@@ -109,6 +112,11 @@ export const Header = () => {
               <a href="#about" className="text-muted-foreground hover:text-foreground transition-colors">
                 About
               </a>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Theme:</span>
+                <ThemeToggle />
+              </div>
               
               {user ? (
                 <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-border">
