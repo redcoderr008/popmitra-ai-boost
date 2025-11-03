@@ -26,6 +26,16 @@ export const ReviewsDisplay = () => {
     fetchReviews();
   }, []);
 
+  useEffect(() => {
+    if (reviews.length === 0) return;
+
+    const interval = setInterval(() => {
+      nextReview();
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [reviews.length, currentIndex]);
+
   const fetchReviews = async () => {
     const { data: reviewsData, error: reviewsError } = await supabase
       .from("reviews")
