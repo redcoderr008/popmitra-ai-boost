@@ -31,7 +31,7 @@ export const ReviewsDisplay = () => {
 
     const interval = setInterval(() => {
       nextReview();
-    }, 2000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [reviews.length, currentIndex]);
