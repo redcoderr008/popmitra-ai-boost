@@ -147,16 +147,13 @@ export const ReviewsDisplay = () => {
             </Button>
 
             <div className="overflow-hidden px-12">
-              <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 transition-all duration-500 ${
-                isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+              <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 transition-transform duration-500 ease-in-out ${
+                isTransitioning ? 'translate-x-[-100%]' : 'translate-x-0'
               }`}>
                 {visibleReviews.map((review, index) => (
                   <Card 
                     key={review.id} 
-                    className="hover:shadow-lg transition-all duration-500 ease-in-out"
-                    style={{
-                      animationDelay: `${index * 100}ms`
-                    }}
+                    className="hover:shadow-lg transition-all duration-300"
                   >
                     <CardHeader>
                       <div className="flex items-start justify-between">
