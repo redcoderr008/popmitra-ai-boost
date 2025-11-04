@@ -20,26 +20,11 @@ interface Review {
 export const ReviewsDisplay = () => {
   const navigate = useNavigate();
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
     fetchReviews();
   }, []);
-
-  useEffect(() => {
-    if (reviews.length === 0) return;
-
-    const interval = setInterval(() => {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        nextReview();
-        setIsTransitioning(false);
-      }, 500);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [reviews.length, currentIndex]);
 
   const fetchReviews = async () => {
     const { data: reviewsData, error: reviewsError } = await supabase
@@ -74,22 +59,6 @@ export const ReviewsDisplay = () => {
     setReviews(reviewsWithProfiles);
   };
 
-  const nextReview = () => {
-    setCurrentIndex((prev) => (prev + 1) % reviews.length);
-  };
-
-  const prevReview = () => {
-    setCurrentIndex((prev) => (prev - 1 + reviews.length) % reviews.length);
-  };
-
-  const getVisibleReviews = () => {
-    if (reviews.length === 0) return [];
-    const visible = [];
-    for (let i = 0; i < 3; i++) {
-      visible.push(reviews[(currentIndex + i) % reviews.length]);
-    }
-    return visible;
-  };
 
   const renderStars = (rating: number) => {
     return (
@@ -112,7 +81,8 @@ export const ReviewsDisplay = () => {
     return null;
   }
 
-  const visibleReviews = getVisibleReviews();
+  // Duplicate reviews for infinite scroll effect
+  const duplicatedReviews = [...reviews, ...reviews];
 
   return (
     <section className="py-20 px-4">
@@ -135,63 +105,48 @@ export const ReviewsDisplay = () => {
           </Button>
         </div>
         
-        {reviews.length > 0 && (
-          <div className="relative">
-            <Button
-              variant="outline"
-              size="icon"
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 rounded-full"
-              onClick={prevReview}
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </Button>
-
-            <div className="overflow-hidden px-12">
-              <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 transition-transform duration-500 ease-in-out ${
-                isTransitioning ? 'translate-x-[-100%]' : 'translate-x-0'
-              }`}>
-                {visibleReviews.map((review, index) => (
-                  <Card 
-                    key={review.id} 
-                    className="hover:shadow-lg transition-all duration-300"
-                  >
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-lg">
-                            {review.is_anonymous ? "Anonymous User" : (review.profiles?.display_name || "User")}
-                          </CardTitle>
-                          <CardDescription>
-                            {new Date(review.created_at).toLocaleDateString("en-US", {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            })}
-                          </CardDescription>
-                        </div>
-                        {renderStars(review.rating)}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-foreground whitespace-pre-wrap line-clamp-4">
-                        {review.comment}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
-            <Button
-              variant="outline"
-              size="icon"
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 rounded-full"
-              onClick={nextReview}
-            >
-              <ChevronRight className="w-5 h-5" />
-            </Button>
+        <div 
+          className="relative overflow-hidden"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+        >
+          <div 
+            className={`flex gap-6 ${isPaused ? '' : 'animate-scroll'}`}
+            style={{
+              width: `${duplicatedReviews.length * 400}px`,
+            }}
+          >
+            {duplicatedReviews.map((review, index) => (
+              <Card 
+                key={`${review.id}-${index}`} 
+                className="flex-shrink-0 w-[380px] hover:shadow-lg transition-all duration-300"
+              >
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg">
+                        {review.is_anonymous ? "Anonymous User" : (review.profiles?.display_name || "User")}
+                      </CardTitle>
+                      <CardDescription>
+                        {new Date(review.created_at).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </CardDescription>
+                    </div>
+                    {renderStars(review.rating)}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-foreground whitespace-pre-wrap line-clamp-4">
+                    {review.comment}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        )}
+        </div>
       </div>
     </section>
   );
