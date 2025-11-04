@@ -14,6 +14,8 @@ import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CookiePolicy from "./pages/CookiePolicy";
 import Review from "./pages/Review";
+import Admin from "./pages/Admin";
+import { PageViewTracker } from "./components/PageViewTracker";
 import { useEffect } from "react";
 
 const queryClient = new QueryClient();
@@ -65,6 +67,7 @@ const AppContent = () => {
   return (
     <BrowserRouter>
       <GAListener />
+      <PageViewTracker />
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/signup" element={<SignUp />} />
@@ -74,6 +77,7 @@ const AppContent = () => {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/CookiePolicy" element={<CookiePolicy />} />
         <Route path="/review" element={<Review />} />
+        <Route path="/admin" element={<Admin />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

@@ -8,6 +8,7 @@ import { UserMetrics } from "@/components/UserMetrics";
 import { PricingSection } from "@/components/PricingSection";
 import { About } from "@/components/About";
 import { Footer } from "@/components/Footer";
+import { NoticeBar } from "@/components/NoticeBar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -173,6 +174,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      <NoticeBar />
       
       <main>
         <Hero onGetStarted={handleGetStarted} />

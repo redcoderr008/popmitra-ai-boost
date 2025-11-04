@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { Sparkles, Menu, X, User, LogOut } from "lucide-react";
+import { Sparkles, Menu, X, User, LogOut, Shield } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdmin } from "@/hooks/useAdmin";
 import { Link } from "react-router-dom";
 import { useComingSoon } from "@/hooks/useComingSoon";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -16,6 +17,7 @@ import {
 export const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdmin();
   const { showComingSoon } = useComingSoon();
 
   return (
@@ -61,6 +63,14 @@ export const Header = () => {
                       Profile
                     </DropdownMenuItem>
                   </Link>
+                  {isAdmin && (
+                    <Link to="/admin">
+                      <DropdownMenuItem>
+                        <Shield className="w-4 h-4 mr-2" />
+                        Admin Panel
+                      </DropdownMenuItem>
+                    </Link>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => signOut()}>
                     <LogOut className="w-4 h-4 mr-2" />
@@ -124,6 +134,20 @@ export const Header = () => {
                     <User className="w-4 h-4" />
                     {user.user_metadata?.display_name || user.email}
                   </div>
+                  <Link to="/profile">
+                    <Button variant="ghost" className="justify-start w-full">
+                      <User className="w-4 h-4 mr-2" />
+                      Profile
+                    </Button>
+                  </Link>
+                  {isAdmin && (
+                    <Link to="/admin">
+                      <Button variant="ghost" className="justify-start w-full">
+                        <Shield className="w-4 h-4 mr-2" />
+                        Admin Panel
+                      </Button>
+                    </Link>
+                  )}
                   <Button variant="ghost" className="justify-start" onClick={() => signOut()}>
                     <LogOut className="w-4 h-4 mr-2" />
                     Sign Out
