@@ -1,18 +1,20 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "./useAuth";
 
 export const useAdmin = () => {
+  const { user, loading: authLoading } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkAdminStatus();
-  }, []);
+    if (!authLoading) {
+      checkAdminStatus();
+    }
+  }, [user, authLoading]);
 
   const checkAdminStatus = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
       if (!user) {
         setIsAdmin(false);
         setLoading(false);
@@ -35,5 +37,5 @@ export const useAdmin = () => {
     }
   };
 
-  return { isAdmin, loading };
+  return { isAdmin, loading: loading || authLoading };
 };
