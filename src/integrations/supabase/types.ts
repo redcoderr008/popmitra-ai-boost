@@ -206,6 +206,41 @@ export type Database = {
         }
         Relationships: []
       }
+      user_notice_dismissals: {
+        Row: {
+          created_at: string
+          dismiss_type: string
+          dismissed_at: string
+          id: string
+          notice_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dismiss_type?: string
+          dismissed_at?: string
+          id?: string
+          notice_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dismiss_type?: string
+          dismissed_at?: string
+          id?: string
+          notice_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notice_dismissals_notice_id_fkey"
+            columns: ["notice_id"]
+            isOneToOne: false
+            referencedRelation: "notices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
