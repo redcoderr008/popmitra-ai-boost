@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Users, TrendingUp, Bell, Eye, Trash2, Plus } from "lucide-react";
+import { Users, TrendingUp, Bell, Eye, Trash2, Plus, Shield, UserCheck } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
@@ -33,12 +33,22 @@ interface Notice {
   expires_at: string | null;
 }
 
+interface UserProfile {
+  user_id: string;
+  display_name: string | null;
+  email_verified: boolean;
+  created_at: string;
+  email?: string;
+  isAdmin?: boolean;
+}
+
 export default function Admin() {
   const navigate = useNavigate();
   const { isAdmin, loading } = useAdmin();
   const { toast } = useToast();
   const [stats, setStats] = useState<Stats>({ totalUsers: 0, totalViews: 0, todayViews: 0, activeNotices: 0 });
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [showAddNotice, setShowAddNotice] = useState(false);
   const [noticeForm, setNoticeForm] = useState({
     title: "",
@@ -58,6 +68,7 @@ export default function Admin() {
     if (isAdmin) {
       fetchStats();
       fetchNotices();
+      fetchUsers();
     }
   }, [isAdmin]);
 
@@ -106,6 +117,45 @@ export default function Admin() {
 
     if (data) {
       setNotices(data);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      // Fetch profiles with basic info
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, email_verified, created_at")
+        .order("created_at", { ascending: false });
+
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        return;
+      }
+
+      // Fetch user roles
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id, role");
+
+      // Fetch user emails from auth
+      const userIds = profiles?.map(p => p.user_id) || [];
+      const usersWithEmails: UserProfile[] = [];
+
+      for (const profile of profiles || []) {
+        const { data: authUser } = await supabase.auth.admin.getUserById(profile.user_id);
+        const userRoles = roles?.filter(r => r.user_id === profile.user_id) || [];
+        
+        usersWithEmails.push({
+          ...profile,
+          email: authUser.user?.email,
+          isAdmin: userRoles.some(r => r.role === 'admin')
+        });
+      }
+
+      setUsers(usersWithEmails);
+    } catch (error) {
+      console.error("Error fetching users:", error);
     }
   };
 
@@ -176,6 +226,48 @@ export default function Admin() {
     }
   };
 
+  const handleMakeAdmin = async (userId: string) => {
+    const { error } = await supabase
+      .from("user_roles")
+      .insert({ user_id: userId, role: "admin" });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to assign admin role",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "User is now an admin",
+      });
+      fetchUsers();
+    }
+  };
+
+  const handleRemoveAdmin = async (userId: string) => {
+    const { error } = await supabase
+      .from("user_roles")
+      .delete()
+      .eq("user_id", userId)
+      .eq("role", "admin");
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove admin role",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Admin role removed",
+      });
+      fetchUsers();
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -235,10 +327,88 @@ export default function Admin() {
               <CardContent>
                 <div className="text-2xl font-bold">{stats.activeNotices}</div>
               </CardContent>
-            </Card>
-          </div>
+          </Card>
+        </div>
 
-          {/* Notices Management */}
+        {/* User Management */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              User Management
+            </CardTitle>
+            <CardDescription>View and manage all users</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Display Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Email Verified</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Joined</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user.user_id}>
+                    <TableCell className="font-medium">
+                      {user.display_name || "No name"}
+                    </TableCell>
+                    <TableCell>{user.email || "N/A"}</TableCell>
+                    <TableCell>
+                      {user.email_verified ? (
+                        <Badge variant="default">
+                          <UserCheck className="w-3 h-3 mr-1" />
+                          Verified
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">Unverified</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {user.isAdmin ? (
+                        <Badge variant="default">
+                          <Shield className="w-3 h-3 mr-1" />
+                          Admin
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">User</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(user.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      {user.isAdmin ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRemoveAdmin(user.user_id)}
+                        >
+                          Remove Admin
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleMakeAdmin(user.user_id)}
+                        >
+                          <Shield className="w-4 h-4 mr-1" />
+                          Make Admin
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Notices Management */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
