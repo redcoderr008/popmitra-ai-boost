@@ -12,15 +12,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Users, TrendingUp, Bell, Eye, Trash2, Plus, Shield, UserCheck } from "lucide-react";
+import { Users, TrendingUp, Bell, Eye, Trash2, Plus, Shield, UserCheck, CreditCard, Check, X } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface Stats {
   totalUsers: number;
   totalViews: number;
   todayViews: number;
   activeNotices: number;
+  pendingPayments: number;
 }
 
 interface Notice {
@@ -46,13 +48,27 @@ interface UserProfile {
   };
 }
 
+interface PaymentVerification {
+  id: string;
+  user_id: string;
+  transaction_code: string;
+  name: string;
+  email: string;
+  plan: 'free' | 'pro' | 'business';
+  status: 'pending' | 'verified' | 'rejected';
+  created_at: string;
+  verified_at: string | null;
+  verified_by: string | null;
+}
+
 export default function Admin() {
   const navigate = useNavigate();
   const { isAdmin, loading } = useAdmin();
   const { toast } = useToast();
-  const [stats, setStats] = useState<Stats>({ totalUsers: 0, totalViews: 0, todayViews: 0, activeNotices: 0 });
+  const [stats, setStats] = useState<Stats>({ totalUsers: 0, totalViews: 0, todayViews: 0, activeNotices: 0, pendingPayments: 0 });
   const [notices, setNotices] = useState<Notice[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [paymentVerifications, setPaymentVerifications] = useState<PaymentVerification[]>([]);
   const [showAddNotice, setShowAddNotice] = useState(false);
   const [noticeForm, setNoticeForm] = useState({
     title: "",
@@ -61,6 +77,8 @@ export default function Admin() {
     is_active: true,
     expires_at: "",
   });
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !isAdmin) {
@@ -73,6 +91,7 @@ export default function Admin() {
       fetchStats();
       fetchNotices();
       fetchUsers();
+      fetchPaymentVerifications();
     }
   }, [isAdmin]);
 
@@ -102,11 +121,18 @@ export default function Admin() {
         .select("*", { count: "exact", head: true })
         .eq("is_active", true);
 
+      // Get pending payments
+      const { count: pendingCount } = await supabase
+        .from("payment_verifications")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pending");
+
       setStats({
         totalUsers: userCount || 0,
         totalViews: viewCount || 0,
         todayViews: todayCount || 0,
         activeNotices: noticeCount || 0,
+        pendingPayments: pendingCount || 0,
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -308,6 +334,99 @@ export default function Admin() {
     }
   };
 
+  const fetchPaymentVerifications = async () => {
+    const { data } = await supabase
+      .from("payment_verifications")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (data) {
+      setPaymentVerifications(data);
+    }
+  };
+
+  const handleVerifyPayment = async (paymentId: string, userId: string, plan: 'free' | 'pro' | 'business') => {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) return;
+
+    try {
+      // Update payment verification status
+      const { error: paymentError } = await supabase
+        .from("payment_verifications")
+        .update({
+          status: 'verified',
+          verified_at: new Date().toISOString(),
+          verified_by: currentUser.id
+        })
+        .eq("id", paymentId);
+
+      if (paymentError) throw paymentError;
+
+      // Update user subscription
+      const { error: subError } = await supabase
+        .from("subscriptions")
+        .upsert({
+          user_id: userId,
+          plan,
+          status: 'active'
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (subError) throw subError;
+
+      toast({
+        title: "Success",
+        description: "Payment verified and subscription activated",
+      });
+
+      fetchPaymentVerifications();
+      fetchStats();
+      fetchUsers();
+    } catch (error) {
+      console.error("Error verifying payment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to verify payment",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectPayment = async () => {
+    if (!selectedPaymentId) return;
+
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) return;
+
+    const { error } = await supabase
+      .from("payment_verifications")
+      .update({
+        status: 'rejected',
+        verified_at: new Date().toISOString(),
+        verified_by: currentUser.id
+      })
+      .eq("id", selectedPaymentId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject payment",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Payment rejected",
+      });
+      fetchPaymentVerifications();
+      fetchStats();
+    }
+
+    setRejectDialogOpen(false);
+    setSelectedPaymentId(null);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -361,14 +480,14 @@ export default function Admin() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Active Notices</CardTitle>
-                <Bell className="w-4 h-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
+                <CreditCard className="w-4 h-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.activeNotices}</div>
+                <div className="text-2xl font-bold">{stats.pendingPayments}</div>
               </CardContent>
-          </Card>
-        </div>
+            </Card>
+          </div>
 
         {/* User Management */}
         <Card>
@@ -461,6 +580,99 @@ export default function Admin() {
                 ))}
               </TableBody>
             </Table>
+          </CardContent>
+        </Card>
+
+        {/* Payment Verifications */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5" />
+              Payment Verifications
+            </CardTitle>
+            <CardDescription>Review and approve payment verifications</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {paymentVerifications.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">No payment verifications yet</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Transaction Code</TableHead>
+                    <TableHead>Plan</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Submitted</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paymentVerifications.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell className="font-medium">{payment.name}</TableCell>
+                      <TableCell>{payment.email}</TableCell>
+                      <TableCell className="font-mono text-sm">{payment.transaction_code}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize">
+                          {payment.plan}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {payment.status === 'pending' && (
+                          <Badge variant="secondary">Pending</Badge>
+                        )}
+                        {payment.status === 'verified' && (
+                          <Badge variant="default">
+                            <Check className="w-3 h-3 mr-1" />
+                            Verified
+                          </Badge>
+                        )}
+                        {payment.status === 'rejected' && (
+                          <Badge variant="destructive">
+                            <X className="w-3 h-3 mr-1" />
+                            Rejected
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(payment.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        {payment.status === 'pending' ? (
+                          <div className="flex gap-2">
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => handleVerifyPayment(payment.id, payment.user_id, payment.plan)}
+                            >
+                              <Check className="w-4 h-4 mr-1" />
+                              Verify
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedPaymentId(payment.id);
+                                setRejectDialogOpen(true);
+                              }}
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              Reject
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">
+                            {payment.status === 'verified' ? 'Approved' : 'Rejected'}
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
@@ -601,6 +813,25 @@ export default function Admin() {
         </div>
       </main>
       <Footer />
+
+      <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject Payment Verification</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reject this payment verification? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedPaymentId(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleRejectPayment} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Reject Payment
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -6,6 +6,8 @@ import { useComingSoon } from "@/hooks/useComingSoon";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { PaymentModal } from "./PaymentModal";
+import { useNavigate } from "react-router-dom";
 
 const plans = [
   {
@@ -66,7 +68,11 @@ const plans = [
 export const PricingSection = () => {
   const { showComingSoon } = useComingSoon();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [currentPlan, setCurrentPlan] = useState<'free' | 'pro' | 'business'>('free');
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<'pro' | 'business'>('pro');
+  const [selectedPlanPrice, setSelectedPlanPrice] = useState('$6');
 
   useEffect(() => {
     const fetchSubscription = async () => {
@@ -85,6 +91,27 @@ export const PricingSection = () => {
 
     fetchSubscription();
   }, [user]);
+
+  const handlePlanClick = (planName: string, price: string) => {
+    if (!user) {
+      navigate('/signin');
+      return;
+    }
+
+    if (planName === 'Starter') {
+      return; // Free plan, no action needed
+    }
+
+    if (planName === 'Pro') {
+      setSelectedPlan('pro');
+      setSelectedPlanPrice(price);
+      setPaymentModalOpen(true);
+    } else if (planName === 'Business') {
+      setSelectedPlan('business');
+      setSelectedPlanPrice(price);
+      setPaymentModalOpen(true);
+    }
+  };
 
   return (
     <section className="py-20 px-6 bg-gradient-secondary">
@@ -164,7 +191,7 @@ export const PricingSection = () => {
                     variant={plan.variant} 
                     size="lg" 
                     className="w-full"
-                    onClick={showComingSoon}
+                    onClick={() => handlePlanClick(plan.name, plan.price + (plan.period || ''))}
                     disabled={isCurrentPlan}
                   >
                     {isCurrentPlan ? 'Current Plan' : plan.cta}
@@ -195,6 +222,13 @@ export const PricingSection = () => {
           </div>
         </div>
       </div>
+
+      <PaymentModal
+        open={paymentModalOpen}
+        onOpenChange={setPaymentModalOpen}
+        plan={selectedPlan}
+        planPrice={selectedPlanPrice}
+      />
     </section>
   );
 };

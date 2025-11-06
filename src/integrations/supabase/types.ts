@@ -80,6 +80,48 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_verifications: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["payment_status"]
+          transaction_code: string
+          user_id: string | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          plan?: Database["public"]["Enums"]["subscription_plan"]
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          transaction_code: string
+          user_id?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          plan?: Database["public"]["Enums"]["subscription_plan"]
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          transaction_code?: string
+          user_id?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
       pending_users: {
         Row: {
           created_at: string
@@ -323,6 +365,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      payment_status: "pending" | "verified" | "rejected"
       subscription_plan: "free" | "pro" | "business"
       subscription_status: "active" | "cancelled" | "expired" | "trial"
     }
@@ -453,6 +496,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      payment_status: ["pending", "verified", "rejected"],
       subscription_plan: ["free", "pro", "business"],
       subscription_status: ["active", "cancelled", "expired", "trial"],
     },
