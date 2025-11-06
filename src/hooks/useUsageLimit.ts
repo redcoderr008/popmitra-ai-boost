@@ -2,36 +2,44 @@ import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
-const FREE_USAGE_LIMIT = 1;
-const UNVERIFIED_USAGE_LIMIT = 3;
+const ANONYMOUS_USAGE_LIMIT = 1;
+const FREE_PLAN_DAILY_LIMIT = 5;
 
 export const useUsageLimit = () => {
   const { user } = useAuth();
   const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<'free' | 'pro' | 'business'>('free');
   const [usageCount, setUsageCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Get usage count for anonymous users from localStorage
-  const getAnonymousUsage = () => {
-    const stored = localStorage.getItem('popmitra_usage_count');
+  // Get daily usage key for free plan users
+  const getDailyUsageKey = () => {
+    const today = new Date().toISOString().split('T')[0];
+    return `popmitra_usage_${today}`;
+  };
+
+  // Get usage count from localStorage
+  const getStoredUsage = () => {
+    const key = user ? getDailyUsageKey() : 'popmitra_usage_count';
+    const stored = localStorage.getItem(key);
     return stored ? parseInt(stored, 10) : 0;
   };
 
-  // Set usage count for anonymous users in localStorage
-  const setAnonymousUsage = (count: number) => {
-    localStorage.setItem('popmitra_usage_count', count.toString());
+  // Set usage count in localStorage
+  const setStoredUsage = (count: number) => {
+    const key = user ? getDailyUsageKey() : 'popmitra_usage_count';
+    localStorage.setItem(key, count.toString());
   };
 
   // Update usage count
   const incrementUsage = async () => {
-    if (user) {
-      // For authenticated users, we don't need to track usage
-      // since they have unlimited generations
+    if (user && (subscriptionPlan === 'pro' || subscriptionPlan === 'business')) {
+      // Pro/Business users have unlimited generations
       return;
     } else {
-      // For anonymous users, update localStorage
+      // For anonymous users and free plan users, update localStorage
       const newCount = usageCount + 1;
-      setAnonymousUsage(newCount);
+      setStoredUsage(newCount);
       setUsageCount(newCount);
     }
   };
@@ -40,55 +48,70 @@ export const useUsageLimit = () => {
   const hasExceededLimit = () => {
     if (!user) {
       // Anonymous users: 1 free generation
-      return usageCount >= FREE_USAGE_LIMIT;
-    } else if (!isEmailVerified) {
-      // Unverified users: 3 generations
-      return usageCount >= UNVERIFIED_USAGE_LIMIT;
+      return usageCount >= ANONYMOUS_USAGE_LIMIT;
+    } else if (subscriptionPlan === 'pro' || subscriptionPlan === 'business') {
+      // Pro/Business users: unlimited
+      return false;
+    } else if (subscriptionPlan === 'free') {
+      // Free plan users: 5 generations per day
+      return usageCount >= FREE_PLAN_DAILY_LIMIT;
     }
-    // Verified users: unlimited
     return false;
   };
 
   // Get remaining free generations
   const getRemainingGenerations = () => {
-    if (user && isEmailVerified) {
+    if (!user) {
+      return Math.max(0, ANONYMOUS_USAGE_LIMIT - usageCount);
+    } else if (subscriptionPlan === 'pro' || subscriptionPlan === 'business') {
       return "unlimited";
-    } else if (user && !isEmailVerified) {
-      return Math.max(0, UNVERIFIED_USAGE_LIMIT - usageCount);
+    } else if (subscriptionPlan === 'free') {
+      return Math.max(0, FREE_PLAN_DAILY_LIMIT - usageCount);
     }
-    return Math.max(0, FREE_USAGE_LIMIT - usageCount);
+    return 0;
   };
 
-  // Fetch email verification status
+  // Fetch user profile and subscription status
   useEffect(() => {
-    const fetchVerificationStatus = async () => {
+    const fetchUserData = async () => {
       if (user) {
-        const { data, error } = await supabase
+        // Fetch profile data
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('email_verified')
           .eq('user_id', user.id)
           .single();
 
-        if (!error && data) {
-          setIsEmailVerified(data.email_verified);
+        if (!profileError && profileData) {
+          setIsEmailVerified(profileData.email_verified);
+        }
+
+        // Fetch subscription data
+        const { data: subData, error: subError } = await supabase
+          .from('subscriptions')
+          .select('plan, status')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!subError && subData && subData.status === 'active') {
+          setSubscriptionPlan(subData.plan as 'free' | 'pro' | 'business');
+        } else {
+          setSubscriptionPlan('free');
         }
       }
     };
 
-    fetchVerificationStatus();
+    fetchUserData();
   }, [user]);
 
   // Initialize usage count
   useEffect(() => {
-    if (!user) {
-      setUsageCount(getAnonymousUsage());
-    } else if (!isEmailVerified) {
-      // Unverified users track usage in localStorage
-      setUsageCount(getAnonymousUsage());
+    if (!user || subscriptionPlan === 'free') {
+      setUsageCount(getStoredUsage());
     } else {
-      setUsageCount(0); // Verified users don't have limits
+      setUsageCount(0); // Pro/Business users don't have limits
     }
-  }, [user, isEmailVerified]);
+  }, [user, subscriptionPlan]);
 
   return {
     usageCount,
@@ -98,7 +121,8 @@ export const useUsageLimit = () => {
     getRemainingGenerations,
     isAuthenticated: !!user,
     isEmailVerified,
-    freeLimit: FREE_USAGE_LIMIT,
-    unverifiedLimit: UNVERIFIED_USAGE_LIMIT,
+    subscriptionPlan,
+    anonymousLimit: ANONYMOUS_USAGE_LIMIT,
+    freePlanLimit: FREE_PLAN_DAILY_LIMIT,
   };
 };

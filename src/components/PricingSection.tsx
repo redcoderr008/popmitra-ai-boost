@@ -3,6 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, Star, Zap, Crown } from "lucide-react";
 import { useComingSoon } from "@/hooks/useComingSoon";
+import { useAuth } from "@/hooks/useAuth";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const plans = [
   {
@@ -62,6 +65,27 @@ const plans = [
 
 export const PricingSection = () => {
   const { showComingSoon } = useComingSoon();
+  const { user } = useAuth();
+  const [currentPlan, setCurrentPlan] = useState<'free' | 'pro' | 'business'>('free');
+
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from('subscriptions')
+          .select('plan, status')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (data && data.status === 'active') {
+          setCurrentPlan(data.plan as 'free' | 'pro' | 'business');
+        }
+      }
+    };
+
+    fetchSubscription();
+  }, [user]);
+
   return (
     <section className="py-20 px-6 bg-gradient-secondary">
       <div className="max-w-6xl mx-auto">
@@ -77,6 +101,10 @@ export const PricingSection = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {plans.map((plan, index) => {
             const IconComponent = plan.icon;
+            const isCurrentPlan = user && 
+              ((plan.name === 'Starter' && currentPlan === 'free') ||
+               (plan.name === 'Pro' && currentPlan === 'pro') ||
+               (plan.name === 'Business' && currentPlan === 'business'));
             
             return (
               <Card 
@@ -85,16 +113,22 @@ export const PricingSection = () => {
                   shadow-medium animate-slide-up relative overflow-hidden
                   transition-all duration-300 hover:ring-2 hover:ring-primary hover:shadow-strong
                   ${plan.popular ? 'ring-2 ring-primary shadow-strong' : ''}
+                  ${isCurrentPlan ? 'ring-2 ring-success shadow-strong' : ''}
                 `}
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                {plan.popular && (
+                {isCurrentPlan && (
+                  <div className="absolute top-0 left-0 right-0 bg-success text-success-foreground text-center py-2 text-sm font-medium">
+                    Current Plan
+                  </div>
+                )}
+                {!isCurrentPlan && plan.popular && (
                   <div className="absolute top-0 left-0 right-0 bg-gradient-primary text-primary-foreground text-center py-2 text-sm font-medium">
                     Most Popular
                   </div>
                 )}
                 
-                <CardHeader className={plan.popular ? 'pt-12' : ''}>
+                <CardHeader className={plan.popular || isCurrentPlan ? 'pt-12' : ''}>
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                       <IconComponent className="w-5 h-5 text-primary" />
@@ -131,8 +165,9 @@ export const PricingSection = () => {
                     size="lg" 
                     className="w-full"
                     onClick={showComingSoon}
+                    disabled={isCurrentPlan}
                   >
-                    {plan.cta}
+                    {isCurrentPlan ? 'Current Plan' : plan.cta}
                   </Button>
                 </CardContent>
               </Card>

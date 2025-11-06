@@ -40,6 +40,10 @@ interface UserProfile {
   created_at: string;
   email?: string;
   isAdmin?: boolean;
+  subscription?: {
+    plan: 'free' | 'pro' | 'business';
+    status: 'active' | 'cancelled' | 'expired' | 'trial';
+  };
 }
 
 export default function Admin() {
@@ -138,6 +142,11 @@ export default function Admin() {
         .from("user_roles")
         .select("user_id, role");
 
+      // Fetch subscriptions
+      const { data: subscriptions } = await supabase
+        .from("subscriptions")
+        .select("user_id, plan, status");
+
       // Fetch user emails from auth
       const userIds = profiles?.map(p => p.user_id) || [];
       const usersWithEmails: UserProfile[] = [];
@@ -145,11 +154,16 @@ export default function Admin() {
       for (const profile of profiles || []) {
         const { data: authUser } = await supabase.auth.admin.getUserById(profile.user_id);
         const userRoles = roles?.filter(r => r.user_id === profile.user_id) || [];
+        const userSub = subscriptions?.find(s => s.user_id === profile.user_id);
         
         usersWithEmails.push({
           ...profile,
           email: authUser.user?.email,
-          isAdmin: userRoles.some(r => r.role === 'admin')
+          isAdmin: userRoles.some(r => r.role === 'admin'),
+          subscription: userSub ? {
+            plan: userSub.plan as 'free' | 'pro' | 'business',
+            status: userSub.status as 'active' | 'cancelled' | 'expired' | 'trial'
+          } : undefined
         });
       }
 
@@ -268,6 +282,32 @@ export default function Admin() {
     }
   };
 
+  const handleUpdateSubscription = async (userId: string, plan: 'free' | 'pro' | 'business') => {
+    const { error } = await supabase
+      .from("subscriptions")
+      .upsert({
+        user_id: userId,
+        plan,
+        status: 'active'
+      }, {
+        onConflict: 'user_id'
+      });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update subscription",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: `Subscription updated to ${plan}`,
+      });
+      fetchUsers();
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -347,6 +387,7 @@ export default function Admin() {
                   <TableHead>Email</TableHead>
                   <TableHead>Email Verified</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Subscription</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -377,6 +418,21 @@ export default function Admin() {
                       ) : (
                         <Badge variant="outline">User</Badge>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={user.subscription?.plan || 'free'}
+                        onValueChange={(value) => handleUpdateSubscription(user.user_id, value as 'free' | 'pro' | 'business')}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="free">Free</SelectItem>
+                          <SelectItem value="pro">Pro</SelectItem>
+                          <SelectItem value="business">Business</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell>
                       {new Date(user.created_at).toLocaleDateString()}
