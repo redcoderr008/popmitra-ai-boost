@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,6 +14,24 @@ serve(async (req) => {
   }
 
   try {
+    // Get user ID from authorization header if available
+    const authHeader = req.headers.get('authorization');
+    let userId = null;
+    
+    if (authHeader) {
+      try {
+        const supabase = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+          { global: { headers: { Authorization: authHeader } } }
+        );
+        const { data: { user } } = await supabase.auth.getUser();
+        userId = user?.id || null;
+      } catch (e) {
+        console.log('Could not extract user ID:', e);
+      }
+    }
+
     const { description, settings } = await req.json();
     
     if (!description) {
@@ -152,6 +171,28 @@ serve(async (req) => {
       }
 
       console.log('Successfully parsed AI response');
+      
+      // Log the generation to database
+      try {
+        const supabaseAdmin = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        );
+        
+        await supabaseAdmin
+          .from('content_generations')
+          .insert({
+            user_id: userId,
+            description,
+            settings
+          });
+        
+        console.log('Generation logged to database');
+      } catch (dbError) {
+        console.error('Error logging generation:', dbError);
+        // Don't fail the request if logging fails
+      }
+      
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

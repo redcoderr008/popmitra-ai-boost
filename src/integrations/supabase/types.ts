@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      content_generations: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          settings: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          settings?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          settings?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       notices: {
         Row: {
           created_at: string
@@ -182,6 +206,42 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      promo_codes: {
+        Row: {
+          code: string
+          created_at: string | null
+          created_by: string | null
+          current_uses: number | null
+          discount_percentage: number
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          max_uses: number | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          created_by?: string | null
+          current_uses?: number | null
+          discount_percentage: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          created_by?: string | null
+          current_uses?: number | null
+          discount_percentage?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
         }
         Relationships: []
       }
@@ -355,6 +415,8 @@ export type Database = {
         Returns: Json
       }
       cleanup_expired_otps: { Args: never; Returns: undefined }
+      get_total_generations: { Args: never; Returns: number }
+      get_total_users: { Args: never; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
